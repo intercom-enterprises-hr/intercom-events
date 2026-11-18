@@ -3,8 +3,9 @@
 Two static pages that share one Supabase database:
 
 - `registration.html` - public page employees open (`registration.html?event=<id>`)
-- `hr.html` - HR control room (login required): attendance, check-in, walk-ins, analytics
+- `hr.html` - HR control room (open, no sign-in): attendance, check-in, walk-ins, analytics
 - `schema.sql` - the database (tables, security rules, first event)
+- `open-access.sql` - run after `schema.sql`: removes the HR sign-in. Anyone with the HR link can read and edit all data.
 
 ## Setup (about 15 minutes)
 
@@ -31,7 +32,7 @@ Two static pages that share one Supabase database:
 
 ## Daily use
 
-HR opens `hr.html`, signs in, picks the event, and ticks people as they arrive. Use **New event** to create the next event; its link is `registration.html?event=<id>` (Link button). Events appear in the list immediately for everyone.
+HR opens `hr.html` (no sign-in), picks the event, and ticks people as they arrive. Use **New event** to create the next event; its link is `registration.html?event=<id>` (Link button). Events appear in the list immediately for everyone.
 
 ## Demo mode
 

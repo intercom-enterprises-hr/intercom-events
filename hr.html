@@ -403,6 +403,7 @@ var CONFIG = {
       .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error_description||j.msg||"auth");return j})})
   }
   function token(){
+    return Promise.resolve(CONFIG.SUPABASE_KEY); /* open access: no HR sign-in */
     if(!SESS)return Promise.reject(new Error("auth"));
     if(Date.now()<SESS.exp)return Promise.resolve(SESS.access);
     return authCall("refresh_token",{refresh_token:SESS.refresh}).then(function(j){saveSess(j);return SESS.access}).catch(function(e){clearSess();showLogin();throw new Error("auth")})
@@ -415,7 +416,7 @@ var CONFIG = {
       if(opt.prefer)h.Prefer=opt.prefer;
       return fetch(base()+"/rest/v1/"+path,{method:opt.method||"GET",headers:h,body:opt.body!==undefined?JSON.stringify(opt.body):undefined,signal:ctl?ctl.signal:undefined}).then(function(r){
         clearTimeout(to);
-        if(r.status===401||r.status===403&&!opt.soft){clearSess();showLogin();throw new Error("auth")}
+        if(r.status===401||r.status===403&&!opt.soft){throw new Error("auth")}
         if(r.status===409)return {__dup:true};
         if(!r.ok)throw new Error("http "+r.status);
         return r.status===204?[]:r.json().catch(function(){return []})
@@ -475,7 +476,7 @@ var CONFIG = {
   var timer=null;
   function showLogin(){clearInterval(timer);timer=null;$("auScrim").classList.add("show");$("liveTxt").textContent="Signed out";setTimeout(function(){$("auMail").focus()},60)}
   function startLive(){
-    $("auScrim").classList.remove("show");$("logout").style.display="";$("liveTxt").textContent="Connecting";
+    $("auScrim").classList.remove("show");$("liveTxt").textContent="Connecting";
     curEv=lsGet("events_hr_cur")||"";renderAll();load(false);
     clearInterval(timer);timer=setInterval(function(){load(true)},8000);
   }
@@ -912,8 +913,7 @@ var CONFIG = {
     if(curEv!=="all"&&!evById(curEv))curEv=events[0].id;
     load(true);
   }else{
-    loadSess();
-    if(SESS)startLive();else showLogin();
+    startLive(); /* open access: no HR sign-in */
   }
 })();
 </script>
