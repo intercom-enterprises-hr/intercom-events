@@ -603,6 +603,11 @@ footer b{color:var(--yellow);font-weight:500}
               <div class="hint" id="emailHint"></div>
             </div>
             <div class="field">
+              <label class="lab" for="phone">Mobile number<i>*</i></label>
+              <input class="inp" id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="01xxxxxxxxx">
+              <div class="hint" id="phoneHint"></div>
+            </div>
+            <div class="field">
               <span class="lab" id="attLab">Are you coming?<i>*</i></span>
               <div class="choices" id="choices" role="radiogroup" aria-labelledby="attLab">
                 <button type="button" class="choice yes" role="radio" aria-checked="false" data-v="Yes"><span class="em">🎉</span>I'm in!<small>Save me a seat</small></button>
@@ -684,7 +689,7 @@ var CONFIG = {
     if(p.action==="event")return sb("events?id=eq."+encodeURIComponent(p.event)+"&select=*").then(function(a){return a.length?{ok:true,event:toEvent(a[0])}:{ok:false}});
     if(p.action==="events")return sb("events?select=*&order=event_date.asc.nullslast").then(function(a){return {ok:true,events:a.map(toEvent)}});
     if(p.action==="person")return sb("rpc/person_name",{method:"POST",body:{p_code:p.code}}).then(function(n){return {ok:!!n,name:n||""}});
-    if(p.action==="register")return sb("rpc/register_for_event",{method:"POST",body:{p_event:p.event,p_code:p.code,p_name:p.name,p_email:p.email,p_attending:p.attending}});
+    if(p.action==="register")return sb("rpc/register_for_event",{method:"POST",body:{p_event:p.event,p_code:p.code,p_name:p.name,p_email:p.email,p_attending:p.attending,p_phone:p.phone||""}});
     return Promise.reject(new Error("unknown action"))
   }
   function urlEvent(){try{return new URLSearchParams(location.search).get("event")||""}catch(e){return ""}}
@@ -763,7 +768,7 @@ var CONFIG = {
   }
 
   function resetForm(){
-    ["code","name","email"].forEach(function(i){$(i).value="";$(i).classList.remove("bad","good")});
+    ["code","name","email","phone"].forEach(function(i){$(i).value="";$(i).classList.remove("bad","good")});
     ["codeHint","nameHint","emailHint","attHint"].forEach(function(i){$(i).textContent="";$(i).className="hint"});
     $("codeHint").textContent="4 digits, between 1000 and 2999";
     document.querySelectorAll(".choice").forEach(function(x){x.classList.remove("on");x.setAttribute("aria-checked","false")});
@@ -827,7 +832,8 @@ var CONFIG = {
   }
 
   /* ---------- form ---------- */
-  var code=$("code"),nameI=$("name"),email=$("email"),nameTouched=false;
+  var code=$("code"),nameI=$("name"),email=$("email"),phone=$("phone"),nameTouched=false;
+  function phoneVal(){return phone.value.replace(/[^\d+]/g,"")}
   function setHint(id,txt,err){var h=$(id);h.textContent=txt||"";h.className="hint"+(err?" err":"")}
   function mark(inp,st){inp.classList.remove("bad","good");if(st){void inp.offsetWidth;inp.classList.add(st)}}
   function codeOk(v){return /^\d{4}$/.test(v)&&+v>=1000&&+v<=2999}
@@ -839,6 +845,7 @@ var CONFIG = {
   }
   function vName(){var v=nameI.value.trim();if(!v){mark(nameI,"bad");setHint("nameHint","Required: please type your full name",true);return false}if(v.length<3){mark(nameI,"bad");setHint("nameHint","That name looks too short",true);return false}mark(nameI,"good");setHint("nameHint","");return true}
   function vEmail(){var v=email.value.trim();if(!v){mark(email,"bad");setHint("emailHint","Required: please enter your work email",true);return false}if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){mark(email,"bad");setHint("emailHint","That email doesn't look right",true);return false}mark(email,"good");setHint("emailHint","");return true}
+  function vPhone(){var v=phoneVal();if(!v){mark(phone,"bad");setHint("phoneHint","Required: please enter your mobile number",true);return false}if(!/^\+?\d{10,15}$/.test(v)){mark(phone,"bad");setHint("phoneHint","That number doesn't look right",true);return false}mark(phone,"good");setHint("phoneHint","");return true}
   function vAtt(){if(!att){$("choices").classList.add("bad");setHint("attHint","Required: tell us if you are coming",true);return false}$("choices").classList.remove("bad");setHint("attHint","");return true}
 
   function lookup(){
@@ -854,7 +861,9 @@ var CONFIG = {
   nameI.addEventListener("blur",function(){if(nameI.value)vName()});
   email.addEventListener("input",function(){if(email.classList.contains("bad"))vEmail()});
   email.addEventListener("blur",function(){if(email.value)vEmail()});
-  [code,nameI,email].forEach(function(el){el.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();submit()}})});
+  phone.addEventListener("input",function(){if(phone.classList.contains("bad"))vPhone()});
+  phone.addEventListener("blur",function(){if(phone.value)vPhone()});
+  [code,nameI,email,phone].forEach(function(el){el.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();submit()}})});
 
   document.querySelectorAll(".choice").forEach(function(b){
     b.addEventListener("click",function(){
@@ -895,7 +904,7 @@ var CONFIG = {
   function submit(){
     if(submitted||!EV||EV.status==="closed")return;
     $("msg").classList.remove("show");
-    var res=[["Employee code",vCode()],["Full name",vName()],["Work email",vEmail()],["Are you coming?",vAtt()]];
+    var res=[["Employee code",vCode()],["Full name",vName()],["Work email",vEmail()],["Mobile number",vPhone()],["Are you coming?",vAtt()]];
     var missing=res.filter(function(x){return !x[1]}).map(function(x){return x[0]});
     if(missing.length){
       showMsg("Almost there! Please fill in: "+missing.join(", ")+".");
@@ -907,7 +916,7 @@ var CONFIG = {
     var btn=$("go"),label=$("goTxt").textContent;btn.classList.add("busy");$("goTxt").textContent="Sending";
     function fail(m){btn.classList.remove("busy");$("goTxt").textContent=label;showMsg(m)}
     if(demo){setTimeout(function(){finish(att)},900);return}
-    api({action:"register",event:EV.id,code:code.value,name:nameI.value.trim(),email:email.value.trim(),attending:att}).then(function(r){
+    api({action:"register",event:EV.id,code:code.value,name:nameI.value.trim(),email:email.value.trim(),phone:phoneVal(),attending:att}).then(function(r){
       if(r&&r.ok)finish(att);
       else if(r&&r.error==="duplicate")fail("This employee code has already replied. If you need to change your answer, please contact the HR team.");
       else if(r&&r.error==="invalid_code")fail("That code isn't valid. Codes run from 1000 to 2999.");
