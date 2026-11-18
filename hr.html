@@ -139,6 +139,8 @@ textarea.inp{min-height:130px;resize:vertical;font-size:14px;line-height:1.4}
 .ic.wa{background:#25D366;border-color:#25D366}.ic.wa svg{fill:#fff}
 .ic.noph{opacity:.5;border-style:dashed;border-color:#fff;box-shadow:0 0 0 1px currentColor}
 .ic.ed{width:26px;height:26px;border:0;background:none;opacity:.55}.ic.ed svg{width:14px;height:14px;stroke:var(--k90);fill:none}
+.ic.del{width:30px;height:30px;border:0;background:none;opacity:.6}.ic.del svg{width:17px;height:17px;stroke:var(--red);fill:none}.ic.del:hover{opacity:1}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:4px 0 10px;cursor:pointer}.chk input{margin-top:2px;width:16px;height:16px;accent-color:var(--red)}
 .ic:focus-visible{outline:3px solid rgba(0,90,170,.45);outline-offset:2px}
 .empty{padding:46px 20px;text-align:center;color:#77777a}
 .empty .big{font-size:44px}
@@ -258,7 +260,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 
 <div class="scrim" id="wiScrim"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="wiH">
   <h3 id="wiH">Add a walk-in</h3><p>Someone decided to join on the spot? Add them and they are checked in right away.</p>
-  <div class="field"><label class="lab" for="wiCode">Employee code</label><input class="inp" id="wiCode" inputmode="numeric" maxlength="4" placeholder="1000 to 2999"></div>
+  <div class="field"><label class="lab" for="wiCode">Employee code</label><input class="inp" id="wiCode" inputmode="numeric" maxlength="4" placeholder="1000 to 6999"></div>
   <div class="field"><label class="lab" for="wiName">Full name</label><input class="inp" id="wiName" placeholder="Employee name"></div>
   <div class="field"><label class="lab" for="wiPhone">Mobile number (optional)</label><input class="inp" id="wiPhone" type="tel" inputmode="tel" placeholder="01012345678"></div>
   <div class="field"><label class="lab" for="wiMail">Email (optional)</label><input class="inp" id="wiMail" type="email" placeholder="name@intercom.com.eg"></div>
@@ -300,6 +302,13 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
   <div class="field"><label class="lab" for="phIn">Mobile number</label><input class="inp" id="phIn" type="tel" inputmode="tel" placeholder="01012345678"></div>
   <div class="err" id="phErr"></div>
   <div class="btns"><button class="btn ghost" id="phCancel">Cancel</button><button class="btn" id="phSave">Save</button></div>
+</div></div>
+
+<div class="scrim" id="delScrim"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="delH">
+  <h3 id="delH">Delete record</h3><p id="delP">This removes the reply from this event. It cannot be undone.</p>
+  <label class="chk"><input type="checkbox" id="delPerson"><span>Also delete their saved name, email and mobile number (used for every event)</span></label>
+  <div class="err" id="delErr"></div>
+  <div class="btns"><button class="btn ghost" id="delCancel">Cancel</button><button class="btn" id="delGo">Delete</button></div>
 </div></div>
 
 <div class="scrim" id="dlScrim"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlH">
@@ -377,6 +386,7 @@ var CONFIG = {
         if(a==="checkin"||a==="undo"){if(!f)return res({ok:false,error:"not_found"});f.checkedInAt=a==="checkin"?now:"";persist();return res({ok:true})}
         if(a==="walkin")return res({ok:true});
         if(a==="setstatus"){if(!f)return res({ok:false,error:"not_found"});f.status=params.status;persist();return res({ok:true})}
+        if(a==="delete"){if(!f)return res({ok:false,error:"not_found"});db.rows=db.rows.filter(function(x){return x!==f});persist();return res({ok:true})}
         if(a==="setphone"){var ph=String(params.phone||"").replace(/[^\d+]/g,"");db.rows.forEach(function(x){if(x.code===c)x.phone=ph});persist();return res({ok:true})}
         if(a==="setdeadline"){var e2=db.events.filter(function(x){return x.id===ev})[0];if(e2)e2.deadline=params.deadline||"";persist();return res({ok:true})}
         if(a==="saveevent"){
@@ -443,6 +453,9 @@ var CONFIG = {
     }
     var rowQ="registrations?event_id=eq."+enc(ev)+"&code=eq."+enc(c);
     if(a==="checkin"||a==="undo")return sb(rowQ,{method:"PATCH",prefer:"return=representation",body:{checked_in_at:a==="checkin"?now:null}}).then(function(r){return r.length?okk():{ok:false,error:"not_found"}});
+    if(a==="delete")return sb(rowQ,{method:"DELETE",prefer:"return=representation"}).then(function(r){
+      if(!r.length)return {ok:false,error:"not_found"};
+      return p.person?sb("people?code=eq."+enc(c),{method:"DELETE"}).then(okk):okk()});
     if(a==="setstatus")return sb(rowQ,{method:"PATCH",prefer:"return=representation",body:{status:p.status}}).then(function(r){return r.length?okk():{ok:false,error:"not_found"}});
     if(a==="setdeadline")return sb("events?id=eq."+enc(ev),{method:"PATCH",prefer:"return=representation",body:{deadline:p.deadline||null}}).then(function(r){return r.length?okk():{ok:false,error:"event_not_found"}});
     if(a==="setphone"){
@@ -540,6 +553,7 @@ var CONFIG = {
   var ICON_CALL='<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
   var ICON_WA='<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 1.8a8.2 8.2 0 1 1-4.2 15.3l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8zM8.6 7.6c-.2 0-.5.1-.7.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3 2.4.9 2.9.7 3.4.7.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4l-2-.9c-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.2-.6.1-.3-.2-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.6-2-.2-.3 0-.4.1-.6l.5-.6.3-.5c.1-.2 0-.4 0-.5l-.9-2.1c-.2-.5-.4-.5-.6-.5z"/></svg>';
   var ICON_ED='<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+  var ICON_DEL='<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
   function digits(p){
     var d=String(p||"").replace(/[^\d]/g,"");
     if(!d)return "";
@@ -572,12 +586,13 @@ var CONFIG = {
           +'<div class="who"><b><span class="code">'+esc(r.code)+'</span>'+esc(r.name)+'</b>'+(inn?'<div class="meta2"><span class="here">Here at '+esc(fmtT(r.checkedInAt))+'</span></div>':'')+'</div>'
           +whenH
           +'<div class="stack">'+whenH+'<select class="sel s-'+s+'" data-c="'+esc(r.code)+'" aria-label="Status for '+esc(r.name)+'">'+opts+'</select></div>'
-          +'<div class="act">'+ico+'</div></div>';
+          +'<div class="act">'+ico+'<button class="ic del" data-del="'+esc(r.code)+'" aria-label="Delete '+esc(r.name)+'" title="Delete record">'+ICON_DEL+'</button></div></div>';
       }).join("");
     }
     $("list").innerHTML=h;
     $("list").querySelectorAll(".tick").forEach(function(b){b.onclick=function(){toggle(b.dataset.c)}});
     $("list").querySelectorAll("[data-ph]").forEach(function(b){b.onclick=function(){openPhone(b.dataset.ph)}});
+    $("list").querySelectorAll("[data-del]").forEach(function(b){b.onclick=function(){openDel(b.dataset.del)}});
     $("list").querySelectorAll(".sel").forEach(function(sl){sl.onchange=function(){setStatus(sl.dataset.c,sl.value)}});
     var ea=$("emptyAdd");if(ea)ea.onclick=function(){openWalkin(/^\d{4}$/.test(q)?q:"",/^\d{4}$/.test(q)?"":q)};
     var dl=$("dlInfo");dl.innerHTML=deadline?'Reply deadline: <b>'+esc(fmt(deadline))+'</b> <button id="dlEdit">change</button>':'No reply deadline set <button id="dlEdit">set one</button>';
@@ -649,6 +664,21 @@ var CONFIG = {
   };
   $("phIn").addEventListener("keydown",function(e){if(e.key==="Enter")$("phSave").click()});
 
+  /* delete dialog */
+  var delCode="";
+  function openDel(c){var r=rows.filter(function(x){return x.code===c})[0];if(!r)return;delCode=c;$("delH").textContent="Delete "+r.name+" ("+c+")?";$("delPerson").checked=false;$("delErr").className="err";$("delScrim").classList.add("show");setTimeout(function(){$("delCancel").focus()},50)}
+  function closeDel(){$("delScrim").classList.remove("show")}
+  $("delCancel").onclick=closeDel;
+  $("delGo").onclick=function(){
+    var r=rows.filter(function(x){return x.code===delCode})[0],e=$("delErr"),btn=$("delGo");if(!r)return closeDel();
+    btn.disabled=true;pending++;
+    api({action:"delete",code:delCode,person:$("delPerson").checked}).then(function(res){
+      btn.disabled=false;pending--;
+      if(!res||!res.ok){e.textContent="Couldn't delete. Please try again.";e.className="err show";return}
+      rows=rows.filter(function(x){return x!==r});closeDel();renderAll();toast(r.name+" deleted")
+    }).catch(function(){btn.disabled=false;pending--;e.textContent="No connection. Nothing was deleted.";e.className="err show"});
+  };
+
   /* walk-in dialog */
   function openWalkin(c,n){$("wiCode").value=c||"";$("wiName").value=n||"";$("wiMail").value="";$("wiPhone").value="";$("wiErr").className="err";$("wiScrim").classList.add("show");setTimeout(function(){(c?$("wiName"):$("wiCode")).focus()},50)}
   function closeWalkin(){$("wiScrim").classList.remove("show")}
@@ -658,7 +688,7 @@ var CONFIG = {
   $("wiSave").onclick=function(){
     var c=$("wiCode").value,n=$("wiName").value.trim(),m=$("wiMail").value.trim(),ph=$("wiPhone").value.trim(),e=$("wiErr");
     function bad(t){e.textContent=t;e.className="err show"}
-    if(!(/^\d{4}$/.test(c)&&+c>=1000&&+c<=2999))return bad("Code must be 4 digits from 1000 to 2999.");
+    if(!(/^\d{4}$/.test(c)&&+c>=1000&&+c<=6999))return bad("Code must be 4 digits from 1000 to 6999.");
     if(n.length<2)return bad("Please enter the employee's name.");
     var ex=rows.filter(function(r){return r.code===c})[0];
     var btn=$("wiSave");btn.disabled=true;
@@ -685,7 +715,7 @@ var CONFIG = {
   $("dlClear").onclick=function(){saveDeadline("")};
   $("dlSave").onclick=function(){var v=$("dlIn").value;if(!v)return toast("Pick a date and time first.",true);saveDeadline(new Date(v).toISOString())};
   document.addEventListener("keydown",function(e){if(e.key==="Escape"){closeWalkin();closeDeadline();closePhone();closeEvent();$("lkScrim").classList.remove("show")}});
-  [$("wiScrim"),$("dlScrim"),$("phScrim"),$("evScrim"),$("lkScrim")].forEach(function(s){s.addEventListener("mousedown",function(e){if(e.target===s)s.classList.remove("show")})});
+  [$("wiScrim"),$("dlScrim"),$("phScrim"),$("delScrim"),$("evScrim"),$("lkScrim")].forEach(function(s){s.addEventListener("mousedown",function(e){if(e.target===s)s.classList.remove("show")})});
 
 
   /* ---------- analytics ---------- */

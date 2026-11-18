@@ -590,7 +590,7 @@ footer b{color:var(--yellow);font-weight:500}
             <div class="field">
               <label class="lab" for="code">Employee code<i>*</i></label>
               <input class="inp code" id="code" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="0000" aria-describedby="codeHint">
-              <div class="hint" id="codeHint">4 digits, between 1000 and 2999</div>
+              <div class="hint" id="codeHint">4 digits, between 1000 and 6999</div>
             </div>
             <div class="field">
               <label class="lab" for="name">Full name<i>*</i></label>
@@ -770,7 +770,7 @@ var CONFIG = {
   function resetForm(){
     ["code","name","email","phone"].forEach(function(i){$(i).value="";$(i).classList.remove("bad","good")});
     ["codeHint","nameHint","emailHint","attHint"].forEach(function(i){$(i).textContent="";$(i).className="hint"});
-    $("codeHint").textContent="4 digits, between 1000 and 2999";
+    $("codeHint").textContent="4 digits, between 1000 and 6999";
     document.querySelectorAll(".choice").forEach(function(x){x.classList.remove("on");x.setAttribute("aria-checked","false")});
     $("goTxt").textContent="Submit";$("go").classList.remove("busy");$("msg").classList.remove("show");
     $("pName").textContent="Your name";$("pCode").textContent="----";$("pStatus").textContent="Waiting for you";
@@ -836,11 +836,11 @@ var CONFIG = {
   function phoneVal(){return phone.value.replace(/[^\d+]/g,"")}
   function setHint(id,txt,err){var h=$(id);h.textContent=txt||"";h.className="hint"+(err?" err":"")}
   function mark(inp,st){inp.classList.remove("bad","good");if(st){void inp.offsetWidth;inp.classList.add(st)}}
-  function codeOk(v){return /^\d{4}$/.test(v)&&+v>=1000&&+v<=2999}
+  function codeOk(v){return /^\d{4}$/.test(v)&&+v>=1000&&+v<=6999}
   function vCode(){
     var v=code.value;
     if(!v){mark(code,"bad");setHint("codeHint","Required: please enter your employee code",true);return false}
-    if(!codeOk(v)){mark(code,"bad");setHint("codeHint","Code must be 4 digits from 1000 to 2999",true);return false}
+    if(!codeOk(v)){mark(code,"bad");setHint("codeHint","Code must be 4 digits from 1000 to 6999",true);return false}
     mark(code,"good");setHint("codeHint","Looks good ✔");return true
   }
   function vName(){var v=nameI.value.trim();if(!v){mark(nameI,"bad");setHint("nameHint","Required: please type your full name",true);return false}if(v.length<3){mark(nameI,"bad");setHint("nameHint","That name looks too short",true);return false}mark(nameI,"good");setHint("nameHint","");return true}
@@ -855,7 +855,7 @@ var CONFIG = {
     if(demo){done(DEMO_NAMES[c]);return}
     api({action:"person",code:c}).then(function(r){if(r&&r.ok&&r.name&&code.value===c)done(r.name)}).catch(function(){});
   }
-  code.addEventListener("input",function(){code.value=code.value.replace(/\D/g,"").slice(0,4);$("pCode").textContent=code.value||"----";if(code.classList.contains("bad")||code.value.length===4)vCode();else{mark(code);setHint("codeHint","4 digits, between 1000 and 2999")}if(codeOk(code.value))lookup()});
+  code.addEventListener("input",function(){code.value=code.value.replace(/\D/g,"").slice(0,4);$("pCode").textContent=code.value||"----";if(code.classList.contains("bad")||code.value.length===4)vCode();else{mark(code);setHint("codeHint","4 digits, between 1000 and 6999")}if(codeOk(code.value))lookup()});
   code.addEventListener("blur",function(){if(code.value)vCode()});
   nameI.addEventListener("input",function(){nameTouched=true;$("pName").textContent=nameI.value.trim()||"Your name";if(nameI.classList.contains("bad"))vName()});
   nameI.addEventListener("blur",function(){if(nameI.value)vName()});
@@ -919,7 +919,7 @@ var CONFIG = {
     api({action:"register",event:EV.id,code:code.value,name:nameI.value.trim(),email:email.value.trim(),phone:phoneVal(),attending:att}).then(function(r){
       if(r&&r.ok)finish(att);
       else if(r&&r.error==="duplicate")fail("This employee code has already replied. If you need to change your answer, please contact the HR team.");
-      else if(r&&r.error==="invalid_code")fail("That code isn't valid. Codes run from 1000 to 2999.");
+      else if(r&&r.error==="invalid_code")fail("That code isn't valid. Codes run from 1000 to 6999.");
       else if(r&&r.error==="closed")fail("Registration for this event is closed.");
       else fail("Something went wrong on our side. Please try again in a moment.")
     }).catch(function(){fail("Couldn't reach the server. Check your connection and try again.")});
