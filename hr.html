@@ -248,7 +248,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 <main class="wrap">
   <div class="stats" id="stats"></div>
 
-  <div class="seg" id="seg"><button class="on" data-v="att">Attendance</button><button data-v="an">Analytics</button><button data-v="fb">Feedback</button></div>
+  <div class="seg" id="seg"><button class="on" data-v="att">Attendance</button><button data-v="an">Analytics</button><button data-v="fb">Feedback</button><button data-v="pl">Plan a trip</button></div>
   <div id="attView">
   <div class="bar">
     <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
@@ -263,6 +263,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
   </div>
   <div id="anView" style="display:none"></div>
   <div id="fbView" style="display:none"></div>
+  <div id="plView" style="display:none"></div>
 </main>
 <footer>Intercom Enterprises &bull; Company Events HR tool</footer>
 
@@ -333,6 +334,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 </div></div>
 <div class="toast" id="toast" role="status"></div>
 
+<script src="planner.js"></script>
 <script>
 /* ===== CONFIG: paste your Supabase project URL and the public "anon" (publishable) key ===== */
 var CONFIG = {
@@ -618,11 +620,32 @@ var CONFIG = {
   }
   function showView(){
     var all=curEv==="all",v=all?"an":view;
-    $("attView").style.display=v==="att"?"":"none";$("anView").style.display=v==="an"?"":"none";$("fbView").style.display=v==="fb"?"":"none";
+    $("attView").style.display=v==="att"?"":"none";$("anView").style.display=v==="an"?"":"none";$("fbView").style.display=v==="fb"?"":"none";$("plView").style.display=v==="pl"?"":"none";
     $("seg").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x.dataset.v===v)});
     if(v==="an")renderAnalytics();
     if(v==="fb")loadFeedback();
+    if(v==="pl"&&plFor!==curEv&&window.TripPlanner){plFor=curEv;window.TripPlanner.mount($("plView"))}
   }
+
+  /* ---------- trip planner tab (planner.js) ---------- */
+  var plFor=null;
+  window.HRBridge={
+    toast:toast,
+    currentEvent:function(){return curEv&&curEv!=="all"?evById(curEv)||null:null},
+    headcount:function(){return rows.filter(function(r){var s=eff(r);return s==="confirmed"||s==="walkin"}).length},
+    /* opens the normal event form with the plan filled in; HR still has to click Save */
+    openEvent:function(id,p){
+      openEvent(id||"");
+      if(!id&&p.name)$("evName").value=p.name;
+      if(!id&&p.date)$("evDate").value=p.date;
+      if(p.deadline)$("evDl").value=p.deadline;
+      if(p.location)$("evLoc").value=p.location;
+      if(p.cost)$("evCost").value=p.cost;
+      if(!id&&p.theme)$("evTheme").value=p.theme;
+      if(p.program)$("evProg").value=p.program.map(function(x){return [x.title,x.text,x.time,x.scene].map(function(s){return String(s||"").replace(/\|/g,"/")}).join(" | ")}).join("\n");
+      $("evH").textContent=(id?"Edit event":"New event")+" · from the trip plan";
+    }
+  };
 
   /* ---------- feedback ---------- */
   var fbData=null,fbFor="",fbBusy=false;

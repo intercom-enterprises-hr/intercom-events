@@ -37,3 +37,20 @@ HR opens `hr.html` (no sign-in), picks the event, and ticks people as they arriv
 ## Demo mode
 
 If `SUPABASE_URL` / `SUPABASE_KEY` are empty, both pages run on sample data stored in the browser only, so you can preview the design before connecting.
+
+## Plan a trip (HR page)
+
+`hr.html` has a **Plan a trip** tab, powered by `planner.js`. It's free and has no AI: everything runs in the browser.
+
+1. Fill in the trip: date, days, people, budget per person, places, breakfast and dinner. **Use registrations** fills in the people who said yes plus walk-ins.
+2. Click **Make the plan**. You get:
+   - a timed schedule
+   - places ranked by distance from the office
+   - transport options and a recommendation
+   - food and stay
+   - the budget per person, compared with your budget
+   - what to bring
+   - a draft group message with a **Copy** button
+3. **Create event from this plan** or **Fill "<event>" with this plan** only opens the normal event form with the plan filled in. Nothing is saved until you click **Save event**.
+
+All prices, places, hotels and buses are **sample data** in the `DATA` block at the top of `planner.js`. Edit them there to use real supplier prices. Upload `planner.js` together with `hr.html` when you publish.
