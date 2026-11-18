@@ -189,6 +189,12 @@ textarea.inp{min-height:130px;resize:vertical;font-size:14px;line-height:1.4}
 .prog{height:22px;background:var(--k5);border-radius:2px;overflow:hidden}.prog i{display:block;height:100%;background:var(--blue);transition:width .6s var(--ease)}
 .big2{font:400 44px/1 'Bebas Neue',Impact,'Arial Narrow',sans-serif;color:var(--k90)}
 .hintx{font-size:13px;color:#77777a;padding:18px 0;text-align:center}
+.hb.w{grid-template-columns:minmax(0,170px) 1fr 44px}.hb.w span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:520px){.hb.w{grid-template-columns:minmax(0,120px) 1fr 40px}}
+.fbc{border-bottom:1px solid var(--k10);padding:12px 0}.fbc:last-child{border-bottom:0}
+.fbc .h{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:14px}.fbc .h b{font-weight:500}
+.fbc .s{color:var(--yellow);letter-spacing:1px}.fbc .t{font-size:12px;color:#77777a;margin-left:auto}
+.fbc p{font-size:14px;color:var(--k90);margin-top:6px;white-space:pre-wrap;overflow-wrap:anywhere}.fbc p i{font-style:normal;color:#77777a;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-right:6px}
 /* dialog */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:60}
 .scrim.show{display:flex;animation:fade .2s}
@@ -234,6 +240,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
       <button class="btn sm gh" id="evNew">＋ New event</button>
       <button class="btn sm gh" id="evEdit">✎ Edit</button>
       <button class="btn sm gh" id="evLink">🔗 Link</button>
+      <button class="btn sm gh" id="fbLink">💬 Feedback link</button>
     </div>
   </div>
 </div>
@@ -241,7 +248,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 <main class="wrap">
   <div class="stats" id="stats"></div>
 
-  <div class="seg" id="seg"><button class="on" data-v="att">Attendance</button><button data-v="an">Analytics</button></div>
+  <div class="seg" id="seg"><button class="on" data-v="att">Attendance</button><button data-v="an">Analytics</button><button data-v="fb">Feedback</button></div>
   <div id="attView">
   <div class="bar">
     <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
@@ -255,6 +262,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
   <div class="list" id="list"></div>
   </div>
   <div id="anView" style="display:none"></div>
+  <div id="fbView" style="display:none"></div>
 </main>
 <footer>Intercom Enterprises &bull; Company Events HR tool</footer>
 
@@ -605,14 +613,72 @@ var CONFIG = {
     sel.innerHTML=events.map(function(e){return '<option value="'+esc(e.id)+'"'+(e.id===curEv?" selected":"")+'>'+esc(e.name)+(e.status==="closed"?" (closed)":"")+'</option>'}).join("")+'<option value="all"'+(curEv==="all"?" selected":"")+'>📊 All events (analytics)</option>';
     var e=evById(curEv),all=curEv==="all";
     document.body.classList.toggle("all",all);
-    $("evEdit").style.display=$("evLink").style.display=all?"none":"";
+    $("evEdit").style.display=$("evLink").style.display=$("fbLink").style.display=all?"none":"";
     $("mastP").textContent=all?"Compare every event side by side and see who shows up again and again.":(e?[e.name,fmtEvDate(e.date),e.location].filter(Boolean).join("  •  "):"Check people in on the day, add walk-ins on the spot, and see who replied and when.");
   }
   function showView(){
     var all=curEv==="all",v=all?"an":view;
-    $("attView").style.display=v==="att"?"":"none";$("anView").style.display=v==="an"?"":"none";
+    $("attView").style.display=v==="att"?"":"none";$("anView").style.display=v==="an"?"":"none";$("fbView").style.display=v==="fb"?"":"none";
     $("seg").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x.dataset.v===v)});
     if(v==="an")renderAnalytics();
+    if(v==="fb")loadFeedback();
+  }
+
+  /* ---------- feedback ---------- */
+  var fbData=null,fbFor="",fbBusy=false;
+  var FB_ORG=["Transport","Timing & schedule","Food","Location"];
+  function loadFeedback(){
+    var ev=curEv;if(fbFor!==ev){fbData=null;fbFor=ev;renderFeedback()}
+    if(fbBusy)return;fbBusy=true;
+    var p=demo?Promise.resolve([]):sb("feedback?event_id=eq."+enc(ev)+"&select=*&order=created_at.desc&limit=5000");
+    p.then(function(a){fbBusy=false;if(fbFor===ev){fbData=a||[];if(view==="fb")renderFeedback()}}).catch(function(){fbBusy=false;if(!fbData)$("fbView").innerHTML='<div class="hintx">Couldn\'t load feedback.</div>'});
+  }
+  function avg(a){return a.length?a.reduce(function(s,x){return s+x},0)/a.length:0}
+  function starTxt(n){var s="";for(var i=1;i<=5;i++)s+=i<=n?"★":"☆";return s}
+  function countList(items){var c={},o=[];items.forEach(function(v){if(!v)return;if(!(v in c)){c[v]=0;o.push(v)}c[v]++});return o.sort(function(a,b){return c[b]-c[a]}).map(function(k){return [k,c[k]]})}
+  function hbRows(list,total,color,fmtVal){
+    if(!list.length)return '<div class="hintx">No answers yet.</div>';
+    var mx=Math.max.apply(null,list.map(function(x){return x[1]}).concat([1]));
+    return list.map(function(x){return '<div class="hb w"><span title="'+esc(x[0])+'">'+esc(x[0])+'</span><div class="tr"><i style="width:'+(total?x[1]/total*100:x[1]/mx*100)+'%;background:'+color+'"></i></div><b>'+(fmtVal?fmtVal(x):x[1])+'</b></div>'}).join("");
+  }
+  function scoreRows(keys,objs){
+    var any=false,h=keys.map(function(k){var v=objs.map(function(o){return +((o||{})[k])||0}).filter(function(n){return n>=1&&n<=5});if(v.length)any=true;var a=avg(v);
+      return '<div class="hb w"><span title="'+esc(k)+'">'+esc(k)+'</span><div class="tr"><i style="width:'+a/5*100+'%;background:'+(a>=4?"var(--blue)":a>=3?"var(--yellow)":"var(--red)")+'"></i></div><b>'+(v.length?a.toFixed(1):"-")+'</b></div>'}).join("");
+    return any?h+'<div class="legend">Average out of 5. Bar colour: blue 4+, yellow 3 to 4, red under 3.</div>':'<div class="hintx">No ratings yet.</div>';
+  }
+  function renderFeedback(){
+    var box=$("fbView");
+    if(!fbData){box.innerHTML='<div class="hintx">Loading feedback…</div>';return}
+    var F=fbData,att=F.filter(function(f){return f.attended}),miss=F.filter(function(f){return !f.attended});
+    var ov=att.map(function(f){return f.overall}).filter(Boolean),a=avg(ov);
+    var came=rows.filter(function(r){return r.checkedInAt}).length;
+    var jn={Yes:0,Maybe:0,No:0};att.forEach(function(f){if(f.join_next in jn)jn[f.join_next]++});
+    var e=evById(curEv)||{},parts=(e.program||[]).map(function(p){return p&&p.title}).filter(Boolean);
+    att.forEach(function(f){Object.keys(f.parts||{}).forEach(function(k){if(parts.indexOf(k)<0)parts.push(k)})});
+    var dist=[5,4,3,2,1].map(function(n){return [starTxt(n),ov.filter(function(x){return x===n}).length]});
+    var reasons=countList(miss.map(function(f){return /^Other/.test(f.reason)?"Other":f.reason}));
+    var helps=countList([].concat.apply([],miss.map(function(f){return f.help||[]})));
+    var nexts=countList([].concat.apply([],F.map(function(f){return f.next_events||[]})));
+    var ideas=F.filter(function(f){return f.next_other}).map(function(f){return f.next_other});
+    var cards=F.filter(function(f){return f.best||f.improve||f.comments||/^Other: /.test(f.reason)}).map(function(f){
+      return '<div class="fbc"><div class="h"><span class="code">'+esc(f.code)+'</span><b>'+esc(f.name)+'</b>'+(f.attended?'<span class="s" title="Overall '+f.overall+' of 5">'+starTxt(f.overall)+'</span>':'<span class="chip c-apol">Missed it</span>')+'<span class="t">'+esc(fmt(f.created_at))+'</span></div>'
+        +(f.best?'<p><i>Best</i>'+esc(f.best)+'</p>':'')+(f.improve?'<p><i>Improve</i>'+esc(f.improve)+'</p>':'')+(/^Other: /.test(f.reason)?'<p><i>Reason</i>'+esc(f.reason.slice(7))+'</p>':'')+(f.comments?'<p><i>Comment</i>'+esc(f.comments)+'</p>':'')+'</div>'}).join("");
+    box.innerHTML='<div class="an">'
+      +'<div class="kpis wide">'
+        +'<div class="kpi"><b>'+F.length+'</b><span>Feedback replies</span><small>'+att.length+' attended, '+miss.length+' missed it</small></div>'
+        +'<div class="kpi"><b>'+(ov.length?a.toFixed(1)+' ★':'-')+'</b><span>Overall rating</span><small>'+(ov.length?"out of 5, from "+ov.length+" people":"No ratings yet")+'</small></div>'
+        +'<div class="kpi"><b>'+(att.length?pct(jn.Yes,att.length)+'%':'-')+'</b><span>Would join again</span><small>'+jn.Yes+' yes, '+jn.Maybe+' maybe, '+jn.No+' no</small></div>'
+        +'<div class="kpi"><b>'+(came?pct(att.length,came)+'%':'-')+'</b><span>Attendee response</span><small>'+(came?att.length+" of "+came+" checked-in people replied":"Shows once people are checked in")+'</small></div>'
+      +'</div>'
+      +'<div class="cardx"><h4>Overall rating</h4><div class="sub">How attendees rated the day</div>'+hbRows(dist,ov.length,"var(--yellow)")+'</div>'
+      +'<div class="cardx"><h4>Agenda scores</h4><div class="sub">Average rating for each part of the day</div>'+scoreRows(parts,att.map(function(f){return f.parts}))+'</div>'
+      +'<div class="cardx"><h4>Organisation</h4><div class="sub">How well it was run</div>'+scoreRows(FB_ORG,att.map(function(f){return f.org}))+'</div>'
+      +'<div class="cardx"><h4>Why people missed it</h4><div class="sub">From those who didn\'t attend</div>'+hbRows(reasons,0,"var(--red)")
+        +(helps.length?'<div class="sub" style="margin:14px 0 4px">What would help them join</div>'+hbRows(helps,0,"#9a9a9c"):'')+'</div>'
+      +'<div class="cardx wide"><h4>Next event wishes</h4><div class="sub">What people want next (they could pick several)</div>'+hbRows(nexts,0,"var(--blue)")
+        +(ideas.length?'<div class="sub" style="margin:14px 0 4px">Other ideas</div>'+ideas.map(function(t){return '<div class="rank"><b>'+esc(t)+'</b></div>'}).join(""):'')+'</div>'
+      +'<div class="cardx wide"><h4>Comments</h4><div class="sub">Everything people wrote, newest first</div>'+(cards||'<div class="hintx">No written comments yet.</div>')+'</div>'
+      +'</div>';
   }
   function renderAll(){renderEvBar();renderStats();renderTabs();renderList();showView()}
   function setEvent(id){curEv=id;lsSet("events_hr_cur",id);filter="all";query="";$("q").value="";rows=[];renderAll();return load(false)}
@@ -923,8 +989,16 @@ var CONFIG = {
   $("evSel").onchange=function(){setEvent(this.value)};
   $("evLink").onclick=function(){
     var base=CONFIG.REG_URL||"",sep=base.indexOf("?")>-1?"&":"?";
+    $("lkH").textContent="Registration link";
     $("lkIn").value=(base||"https://YOUR-REGISTRATION-PAGE")+sep+"event="+encodeURIComponent(curEv);
     $("lkP").textContent=base?"Send this link to employees for this event.":"Host registration.html, put its address in CONFIG.REG_URL at the top of this page, and this becomes the full link. Each event uses ?event=<id>.";
+    $("lkScrim").classList.add("show");
+  };
+  $("fbLink").onclick=function(){
+    var base=(CONFIG.REG_URL||"").replace(/registration(\.html)?$/,"feedback$1"),sep=base.indexOf("?")>-1?"&":"?";
+    $("lkH").textContent="Feedback link";
+    $("lkIn").value=(base||"https://YOUR-FEEDBACK-PAGE")+sep+"event="+encodeURIComponent(curEv);
+    $("lkP").textContent="Send this after the event. Replies show up in the Feedback tab automatically.";
     $("lkScrim").classList.add("show");
   };
   $("lkClose").onclick=function(){$("lkScrim").classList.remove("show")};

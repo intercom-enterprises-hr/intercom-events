@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Feedback | Intercom</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#ED1C24;--red-d:#C8161D;--yellow:#FBAF17;--blue:#005AAA;--k90:#404041;--ink:#232324;--k10:#ECECEC;--k5:#F6F6F6;--mute:#6f6f72;--ease:cubic-bezier(.2,0,0,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Roboto',Arial,sans-serif;color:var(--ink);background:var(--k5);line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{width:min(720px,100% - 32px);margin:0 auto}
+.stripe{height:5px;background:linear-gradient(90deg,var(--yellow) 0 33.3%,var(--red) 33.3% 66.6%,var(--blue) 66.6% 100%)}
+header.top{background:#fff;border-bottom:1px solid var(--k10)}
+header.top .wrap{display:flex;align-items:center;height:60px}
+header.top img{height:30px;width:auto}
+.mast{background:var(--k90);color:#fff}
+.mast .wrap{padding:28px 0 64px}
+.eyebrow{font:500 12px/1 'Roboto',Arial,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:var(--yellow)}
+h1{font:400 clamp(38px,8vw,60px)/.95 'Bebas Neue',Impact,'Arial Narrow',sans-serif;margin-top:10px;letter-spacing:.01em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--yellow)}
+.mast p{margin-top:10px;color:#d8d8d9;font-weight:300;max-width:560px}
+main{margin-top:-40px;padding-bottom:50px}
+.card{background:#fff;border:1px solid var(--k10);border-top:3px solid var(--red);padding:22px 20px;box-shadow:0 8px 24px rgba(0,0,0,.06);margin-bottom:14px}
+.card.blue{border-top-color:var(--blue)}.card.yellow{border-top-color:var(--yellow)}
+.card h2{font:400 28px/1 'Bebas Neue',Impact,'Arial Narrow',sans-serif;color:var(--k90);letter-spacing:.02em;margin-bottom:4px}
+.card .sub{font-size:14px;color:var(--mute);margin-bottom:16px}
+.field{margin-bottom:18px}
+.field:last-child{margin-bottom:0}
+.lab{display:block;font-size:13px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--k90);margin-bottom:8px}
+.lab i{color:var(--red);font-style:normal;margin-left:3px}
+.lab small{text-transform:none;letter-spacing:0;color:var(--mute);font-weight:400;margin-left:6px}
+.inp{width:100%;font:400 16px 'Roboto',Arial,sans-serif;padding:13px;border:1px solid #cfcfd0;border-radius:2px;background:#fff;color:var(--ink)}
+.inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,90,170,.18)}
+.inp.code{font:400 30px/1 'Bebas Neue',Impact,sans-serif;letter-spacing:.3em;max-width:190px}
+textarea.inp{min-height:92px;resize:vertical}
+.hint{font-size:13px;color:var(--mute);margin-top:6px;min-height:18px}
+.hint.err{color:var(--red)}
+.two{display:grid;grid-template-columns:1fr;gap:0 16px}
+@media(min-width:600px){.two{grid-template-columns:200px 1fr}}
+.note{font-size:14px;background:#E6F0FA;color:#0b3f73;border-left:4px solid var(--blue);padding:12px 14px;margin-bottom:16px}
+.note button{background:none;border:0;color:var(--blue);font:500 14px 'Roboto',Arial,sans-serif;text-decoration:underline;cursor:pointer;margin-left:6px}
+.choices{display:flex;flex-wrap:wrap;gap:8px}
+.ch{font:500 14px 'Roboto',Arial,sans-serif;padding:11px 14px;border-radius:99px;border:1px solid #cfcfd0;background:#fff;color:var(--k90);cursor:pointer;transition:all .15s var(--ease);min-height:44px}
+.ch:hover{border-color:var(--k90)}
+.ch[aria-pressed="true"],.ch[aria-checked="true"]{background:var(--k90);border-color:var(--k90);color:#fff}
+.big2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.big2 .ch{border-radius:2px;padding:18px 10px;font-size:16px}
+.big2 .ch b{display:block;font:400 26px/1 'Bebas Neue',Impact,sans-serif;letter-spacing:.03em;margin-top:4px}
+.rate{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--k10)}
+.rate:last-child{border-bottom:0}
+.rate span{font-size:15px;color:var(--ink)}
+.stars{display:flex;gap:2px;flex:none}
+.st{width:40px;height:40px;border:0;background:none;cursor:pointer;padding:4px;color:#d3d3d5;transition:transform .15s var(--ease),color .15s}
+.st svg{width:100%;height:100%;fill:currentColor}
+.st.on{color:var(--yellow)}
+.st:hover{transform:scale(1.12)}
+.st:focus-visible,.ch:focus-visible,.btn:focus-visible{outline:3px solid rgba(0,90,170,.45);outline-offset:2px}
+.stars.big .st{width:52px;height:52px}
+.rlab{font-size:13px;color:var(--mute);min-height:18px;margin-top:2px}
+@media(max-width:420px){.rate{flex-direction:column;align-items:flex-start;gap:2px}.st{width:44px;height:44px}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:500 15px/1 'Roboto',Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;background:var(--red);color:#fff;border:0;padding:17px 22px;border-radius:2px;cursor:pointer;width:100%;transition:background .2s var(--ease)}
+.btn:hover{background:var(--red-d)}
+.btn[disabled]{opacity:.6;cursor:progress}
+.msg{display:none;margin-top:12px;padding:12px 14px;background:#FDE8E8;color:var(--red-d);font-size:14px;border-left:4px solid var(--red)}
+.msg.show{display:block}
+.hide{display:none!important}
+.done{text-align:center;padding:40px 20px}
+.done .em{font-size:54px}
+.done h2{font-size:44px;margin:8px 0}
+footer{padding:10px 0 40px;text-align:center;font-size:13px;color:var(--mute)}
+.skel{padding:40px 0;text-align:center;color:var(--mute)}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="stripe"></div>
+<header class="top"><div class="wrap"><img src="data:image/png;base64,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" alt="Intercom Enterprises"></div></header>
+<div class="mast"><div class="wrap">
+  <div class="eyebrow">Intercom &bull; Event feedback</div>
+  <h1 id="title">How was <em>the event?</em></h1>
+  <p id="intro">Under a minute. Your answers help HR plan better events.</p>
+</div></div>
+
+<main class="wrap">
+  <div id="loading" class="card skel">Loading…</div>
+  <div id="noEvent" class="card hide"><h2>Event not found</h2><div class="sub">This feedback link isn't complete. Please use the link HR sent you.</div></div>
+
+  <form id="form" class="hide" novalidate>
+    <div class="card">
+      <h2>You</h2><div class="sub">Type your employee code and we'll fill in your name.</div>
+      <div class="two">
+        <div class="field"><label class="lab" for="code">Employee code<i>*</i></label><input class="inp code" id="code" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000"><div class="hint" id="codeHint"></div></div>
+        <div class="field"><label class="lab" for="name">Full name<i>*</i></label><input class="inp" id="name" autocomplete="name" placeholder="e.g. Ahmed Hassan"><div class="hint" id="nameHint"></div></div>
+      </div>
+      <div id="attNote" class="note hide"></div>
+      <div class="field" id="attAsk"><span class="lab" id="attLab">Did you attend the event?<i>*</i></span>
+        <div class="big2" role="radiogroup" aria-labelledby="attLab">
+          <button type="button" class="ch" role="radio" aria-checked="false" data-att="1">🎉<b>Yes, I was there</b></button>
+          <button type="button" class="ch" role="radio" aria-checked="false" data-att="0">😢<b>No, I missed it</b></button>
+        </div><div class="hint" id="attHint"></div></div>
+    </div>
+
+    <div id="secYes" class="hide">
+      <div class="card blue">
+        <h2>The day</h2><div class="sub">Tap the stars. 1 = poor, 5 = excellent.</div>
+        <div class="field"><span class="lab">Overall, how was the event?<i>*</i></span><div class="stars big" data-key="overall" role="radiogroup" aria-label="Overall rating"></div><div class="rlab" id="overallLab"></div><div class="hint" id="overallHint"></div></div>
+        <div class="field" id="partsF"><span class="lab">Rate each part of the day<small>optional</small></span><div id="parts"></div></div>
+      </div>
+      <div class="card yellow">
+        <h2>Organisation</h2><div class="sub">How well was it run? Optional, tap a star again to clear it.</div>
+        <div id="org"></div>
+      </div>
+      <div class="card blue">
+        <h2>Next time</h2>
+        <div class="field"><span class="lab" id="joinLab">Would you join the next event?<i>*</i></span><div class="choices" data-single="join" role="radiogroup" aria-labelledby="joinLab"><button type="button" class="ch" role="radio" aria-checked="false" data-v="Yes">👍 Yes</button><button type="button" class="ch" role="radio" aria-checked="false" data-v="Maybe">🤔 Maybe</button><button type="button" class="ch" role="radio" aria-checked="false" data-v="No">👎 No</button></div><div class="hint" id="joinHint"></div></div>
+        <div class="field"><label class="lab" for="best">Best moment<small>optional</small></label><textarea class="inp" id="best" maxlength="2000" placeholder="What did you enjoy most?"></textarea></div>
+        <div class="field"><label class="lab" for="improve">One thing we should improve<small>optional</small></label><textarea class="inp" id="improve" maxlength="2000" placeholder="Be honest, it helps"></textarea></div>
+      </div>
+    </div>
+
+    <div id="secNo" class="hide">
+      <div class="card blue">
+        <h2>We missed you</h2><div class="sub">Help us plan events more people can join.</div>
+        <div class="field"><span class="lab" id="reasonLab">Why couldn't you come?<i>*</i></span><div class="choices" data-single="reason" role="radiogroup" aria-labelledby="reasonLab"></div>
+          <input class="inp hide" id="reasonOther" maxlength="150" placeholder="Tell us the reason" style="margin-top:10px"><div class="hint" id="reasonHint"></div></div>
+        <div class="field"><span class="lab">What would help you join next time?<small>pick any</small></span><div class="choices" data-multi="help"></div></div>
+      </div>
+    </div>
+
+    <div id="secAll" class="hide">
+      <div class="card">
+        <h2>Ideas</h2>
+        <div class="field"><span class="lab">Which event would you like next?<small>pick any</small></span><div class="choices" data-multi="next"></div>
+          <input class="inp" id="nextOther" maxlength="300" placeholder="Another idea? (optional)" style="margin-top:10px"></div>
+        <div class="field"><label class="lab" for="comments">Anything else?<small>optional</small></label><textarea class="inp" id="comments" maxlength="2000"></textarea></div>
+        <button class="btn" type="submit" id="go">Send feedback →</button>
+        <div class="msg" id="msg" role="alert"></div>
+      </div>
+    </div>
+  </form>
+
+  <div id="done" class="card done hide"><div class="em">💛</div><h2>Thank you!</h2><div class="sub" id="doneP">Your feedback reached the HR team.</div></div>
+</main>
+<footer>Intercom Enterprises &bull; Company Events</footer>
+
+<script>
+(function(){
+  var CONFIG={
+    SUPABASE_URL:"https://qhlaoumuqtkebhppmtfr.supabase.co",
+    SUPABASE_KEY:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobGFvdW11cXRrZWJocHBtdGZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwMDc3ODEsImV4cCI6MjExMDU4Mzc4MX0.srLQC24aHG7iE-ELFMLZ1Y0x23spsxwakWzzqrUirRA"
+  };
+  var ORG=["Transport","Timing & schedule","Food","Location"];
+  var REASONS=["Workload","Personal / family","Date or time didn't suit me","Too far","Not my kind of activity","Didn't hear about it in time","Other"];
+  var HELP=["A different day","A closer place","A different activity","Earlier notice"];
+  var NEXT=["Beach trip","Sports day","Team dinner","Iftar","Family day","Workshop","Volunteering"];
+  var WORDS=["","Poor","Fair","Good","Very good","Excellent"];
+  var STAR='<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z"/></svg>';
+
+  function $(id){return document.getElementById(id)}
+  function esc(s){var d=document.createElement("div");d.textContent=s==null?"":String(s);return d.innerHTML}
+  function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+  function sb(path,opt){
+    opt=opt||{};
+    return fetch(CONFIG.SUPABASE_URL+"/rest/v1/"+path,{method:opt.method||"GET",
+      headers:{apikey:CONFIG.SUPABASE_KEY,Authorization:"Bearer "+CONFIG.SUPABASE_KEY,"Content-Type":"application/json"},
+      body:opt.body?JSON.stringify(opt.body):undefined}).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json()})
+  }
+  var evId="";try{evId=new URLSearchParams(location.search).get("event")||""}catch(e){}
+
+  var S={attended:null,overall:0,parts:{},org:{},join:"",reason:"",help:[],next:[]},EV=null,KEY="";
+
+  function stars(el,key,onSet){
+    var h="";for(var i=1;i<=5;i++)h+='<button type="button" class="st" role="radio" aria-checked="false" aria-label="'+i+' of 5 ('+WORDS[i]+')" data-n="'+i+'">'+STAR+'</button>';
+    el.innerHTML=h;
+    var bs=el.querySelectorAll(".st");
+    function paint(n){bs.forEach(function(b){var k=+b.dataset.n;b.classList.toggle("on",k<=n);b.setAttribute("aria-checked",k===n)})}
+    bs.forEach(function(b){b.onclick=function(){var n=+b.dataset.n;onSet(n,paint)}});
+    return paint;
+  }
+  function rateRows(box,list,target){
+    box.innerHTML=list.map(function(t,i){return '<div class="rate"><span>'+esc(t)+'</span><div class="stars" data-i="'+i+'" role="radiogroup" aria-label="'+esc(t)+'"></div></div>'}).join("");
+    box.querySelectorAll(".stars").forEach(function(el){var t=list[+el.dataset.i];
+      stars(el,t,function(n,paint){if(target[t]===n){delete target[t];paint(0)}else{target[t]=n;paint(n)}})});
+  }
+  function single(el,list,key,after){
+    if(list)el.innerHTML=list.map(function(v){return '<button type="button" class="ch" role="radio" aria-checked="false" data-v="'+esc(v)+'">'+esc(v)+'</button>'}).join("");
+    el.querySelectorAll(".ch").forEach(function(b){b.onclick=function(){S[key]=b.dataset.v;el.querySelectorAll(".ch").forEach(function(x){x.setAttribute("aria-checked",x===b)});after&&after()}});
+  }
+  function multi(el,list,key){
+    el.innerHTML=list.map(function(v){return '<button type="button" class="ch" aria-pressed="false" data-v="'+esc(v)+'">'+esc(v)+'</button>'}).join("");
+    el.querySelectorAll(".ch").forEach(function(b){b.onclick=function(){var v=b.dataset.v,a=S[key],i=a.indexOf(v);if(i>-1)a.splice(i,1);else a.push(v);b.setAttribute("aria-pressed",i<0)}});
+  }
+
+  function setAttended(v,fromSystem){
+    S.attended=v;
+    document.querySelectorAll("[data-att]").forEach(function(b){b.setAttribute("aria-checked",String(b.dataset.att==="1"===v))});
+    $("secYes").classList.toggle("hide",v!==true);$("secNo").classList.toggle("hide",v!==false);$("secAll").classList.toggle("hide",v===null);
+    $("attHint").textContent="";$("attHint").className="hint";
+  }
+  document.querySelectorAll("[data-att]").forEach(function(b){b.onclick=function(){setAttended(b.dataset.att==="1")}});
+
+  function codeOk(v){return /^\d{4}$/.test(v)&&+v>=1000&&+v<=6999}
+  var nameTouched=false,lookupFor="";
+  $("name").addEventListener("input",function(){nameTouched=true});
+  $("code").addEventListener("input",function(){
+    var c=this.value=this.value.replace(/\D/g,"").slice(0,4),h=$("codeHint");
+    if(c.length<4){h.textContent="";h.className="hint";return}
+    if(!codeOk(c)){h.textContent="Please check your employee code";h.className="hint err";return}
+    h.textContent="Looks good ✔";h.className="hint";
+    if(lookupFor===c)return;lookupFor=c;
+    sb("rpc/feedback_lookup",{method:"POST",body:{p_event:EV.id,p_code:c}}).then(function(r){
+      if($("code").value!==c||!r)return;
+      if(r.name&&!(nameTouched&&$("name").value.trim()))$("name").value=r.name;
+      if(r.replied){h.textContent="You already sent feedback for this event. Thank you!";h.className="hint err";return}
+      var n=$("attNote");
+      if(r.any_checkins){
+        setAttended(!!r.checked_in,true);
+        n.innerHTML=(r.checked_in?"✅ HR checked you in at this event.":"We don't have you checked in at this event.")+'<button type="button" id="attChange">Not right? Change</button>';
+        n.classList.remove("hide");$("attAsk").classList.add("hide");
+        $("attChange").onclick=function(){n.classList.add("hide");$("attAsk").classList.remove("hide")};
+      }else{n.classList.add("hide");$("attAsk").classList.remove("hide")}
+    }).catch(function(){});
+  });
+
+  function showMsg(t){var m=$("msg");m.textContent=t;m.classList.add("show")}
+  $("form").addEventListener("submit",function(e){
+    e.preventDefault();$("msg").classList.remove("show");
+    var miss=[],c=$("code").value,n=$("name").value.trim();
+    if(!codeOk(c)){miss.push("employee code");$("codeHint").textContent="Required: your 4-digit code";$("codeHint").className="hint err"}
+    if(n.length<2){miss.push("full name");$("nameHint").textContent="Required";$("nameHint").className="hint err"}else{$("nameHint").textContent=""}
+    if(S.attended===null){miss.push("did you attend");$("attHint").textContent="Required";$("attHint").className="hint err"}
+    var reason=S.reason;
+    if(S.attended===true){
+      if(!S.overall){miss.push("overall rating");$("overallHint").textContent="Required: tap a star";$("overallHint").className="hint err"}
+      if(!S.join){miss.push("join next event");$("joinHint").textContent="Required";$("joinHint").className="hint err"}
+    }
+    if(S.attended===false){
+      if(reason==="Other"){var o=$("reasonOther").value.trim();reason=o?"Other: "+o:""}
+      if(!reason){miss.push("reason");$("reasonHint").textContent=S.reason==="Other"?"Please type the reason":"Required";$("reasonHint").className="hint err"}
+    }
+    if(miss.length)return showMsg("Almost there! Please fill in: "+miss.join(", ")+".");
+    if(store(KEY+c))return showMsg("This device already sent feedback for code "+c+".");
+    var data={attended:S.attended,overall:S.overall||"",parts:S.parts,org:S.org,join_next:S.join,best:$("best").value.trim(),improve:$("improve").value.trim(),
+      reason:reason,help:S.help,next_events:S.next,next_other:$("nextOther").value.trim(),comments:$("comments").value.trim()};
+    var b=$("go");b.disabled=true;b.textContent="Sending…";
+    sb("rpc/submit_feedback",{method:"POST",body:{p_event:EV.id,p_code:c,p_name:n,p_data:data}}).then(function(r){
+      b.disabled=false;b.textContent="Send feedback →";
+      if(r&&r.ok){store(KEY+c,"1");$("form").classList.add("hide");$("done").classList.remove("hide");$("doneP").textContent="Your feedback on "+EV.name+" reached the HR team.";window.scrollTo(0,0);return}
+      if(r&&r.error==="duplicate")return showMsg("Feedback for this code was already sent. Thank you!");
+      if(r&&r.error==="invalid_code")return showMsg("That code isn't valid. Please check your employee code.");
+      showMsg("Something went wrong. Please check your answers and try again.");
+    }).catch(function(){b.disabled=false;b.textContent="Send feedback →";showMsg("Couldn't reach the server. Check your connection and try again.")});
+  });
+
+  function build(){
+    KEY="fb_"+EV.id+"_";
+    document.title=EV.name+" feedback | Intercom";
+    var w=EV.name.split(/\s+/);$("title").innerHTML="How was "+esc(w.length>1?w.slice(0,-1).join(" ")+" ":"")+"<em>"+esc(w[w.length-1])+"?</em>";
+    var d=EV.event_date?new Date(EV.event_date):null;
+    $("intro").textContent=(d&&!isNaN(d)?d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})+" · ":"")+"Under a minute. Your answers help HR plan better events.";
+    var paintO=stars(document.querySelector('[data-key="overall"]'),"overall",function(n,paint){S.overall=n;paint(n);$("overallLab").textContent=WORDS[n];$("overallHint").textContent=""});
+    var parts=(EV.program||[]).map(function(p){return p&&p.title}).filter(Boolean);
+    if(parts.length)rateRows($("parts"),parts,S.parts);else $("partsF").classList.add("hide");
+    rateRows($("org"),ORG,S.org);
+    single(document.querySelector('[data-single="join"]'),null,"join",function(){$("joinHint").textContent=""});
+    single(document.querySelector('[data-single="reason"]'),REASONS,"reason",function(){$("reasonOther").classList.toggle("hide",S.reason!=="Other");$("reasonHint").textContent="";if(S.reason==="Other")$("reasonOther").focus()});
+    multi(document.querySelector('[data-multi="help"]'),HELP,"help");
+    multi(document.querySelector('[data-multi="next"]'),NEXT,"next");
+    $("loading").classList.add("hide");$("form").classList.remove("hide");
+  }
+
+  if(!evId){$("loading").classList.add("hide");$("noEvent").classList.remove("hide");return}
+  sb("events?id=eq."+encodeURIComponent(evId)+"&select=id,name,event_date,program").then(function(a){
+    if(!a.length){$("loading").classList.add("hide");$("noEvent").classList.remove("hide");return}
+    EV=a[0];build();
+  }).catch(function(){$("loading").textContent="Couldn't load. Please refresh the page."});
+})();
+</script>
+</body>
+</html>
