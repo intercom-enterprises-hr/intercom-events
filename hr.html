@@ -241,6 +241,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
       <button class="btn sm gh" id="evEdit">✎ Edit</button>
       <button class="btn sm gh" id="evLink">🔗 Link</button>
       <button class="btn sm gh" id="fbLink">💬 Feedback link</button>
+      <button class="btn sm gh" id="evDel">🗑 Delete</button>
     </div>
   </div>
 </div>
@@ -248,7 +249,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 <main class="wrap">
   <div class="stats" id="stats"></div>
 
-  <div class="seg" id="seg"><button class="on" data-v="att">Attendance</button><button data-v="an">Analytics</button><button data-v="fb">Feedback</button><button data-v="pl">Plan a trip</button></div>
+  <div class="seg" id="seg"><button class="on" data-v="att">Attendance</button><button data-v="an">Analytics</button><button data-v="fb">Feedback</button></div>
   <div id="attView">
   <div class="bar">
     <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
@@ -263,7 +264,6 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
   </div>
   <div id="anView" style="display:none"></div>
   <div id="fbView" style="display:none"></div>
-  <div id="plView" style="display:none"></div>
 </main>
 <footer>Intercom Enterprises &bull; Company Events HR tool</footer>
 
@@ -300,6 +300,13 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
   <div class="btns"><button class="btn ghost" id="evCancel">Cancel</button><button class="btn" id="evSave">Save event</button></div>
 </div></div>
 
+<div class="scrim" id="edScrim"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="edH">
+  <h3 id="edH">Delete event</h3><p id="edP">This deletes the event, its registration page, every reply and all feedback for it. It cannot be undone.</p>
+  <label class="chk"><input type="checkbox" id="edOk"><span id="edOkT">Yes, delete this event and everything in it</span></label>
+  <div class="err" id="edErr"></div>
+  <div class="btns"><button class="btn ghost" id="edCancel">Cancel</button><button class="btn" id="edGo" disabled>Delete event</button></div>
+</div></div>
+
 <div class="scrim" id="lkScrim"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="lkH">
   <h3 id="lkH">Registration link</h3><p id="lkP">Send this link to employees for this event.</p>
   <div class="field"><input class="inp" id="lkIn" readonly></div>
@@ -334,7 +341,6 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 </div></div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="planner.js"></script>
 <script>
 /* ===== CONFIG: paste your Supabase project URL and the public "anon" (publishable) key ===== */
 var CONFIG = {
@@ -399,6 +405,7 @@ var CONFIG = {
         if(a==="delete"){if(!f)return res({ok:false,error:"not_found"});db.rows=db.rows.filter(function(x){return x!==f});persist();return res({ok:true})}
         if(a==="setphone"){var ph=String(params.phone||"").replace(/[^\d+]/g,"");db.rows.forEach(function(x){if(x.code===c)x.phone=ph});persist();return res({ok:true})}
         if(a==="setdeadline"){var e2=db.events.filter(function(x){return x.id===ev})[0];if(e2)e2.deadline=params.deadline||"";persist();return res({ok:true})}
+        if(a==="deleteevent"){var n0=db.events.length;db.events=db.events.filter(function(x){return x.id!==ev});if(db.events.length===n0)return res({ok:false,error:"event_not_found"});db.rows=db.rows.filter(function(x){return x.event!==ev});persist();return res({ok:true})}
         if(a==="saveevent"){
           var id=(params.id||params.name||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
           var o={id:id,name:params.name,date:params.date||"",deadline:params.deadline||"",location:params.location||"",cost:params.cost||"",tagline:params.tagline||"",theme:params.theme||"classic",status:params.status||"open",countdown:params.countdown==="1",program:JSON.parse(params.program||"[]")};
@@ -468,6 +475,8 @@ var CONFIG = {
       return p.person?sb("people?code=eq."+enc(c),{method:"DELETE"}).then(okk):okk()});
     if(a==="setstatus")return sb(rowQ,{method:"PATCH",prefer:"return=representation",body:{status:p.status}}).then(function(r){return r.length?okk():{ok:false,error:"not_found"}});
     if(a==="setdeadline")return sb("events?id=eq."+enc(ev),{method:"PATCH",prefer:"return=representation",body:{deadline:p.deadline||null}}).then(function(r){return r.length?okk():{ok:false,error:"event_not_found"}});
+    /* deleting the event also deletes its registrations and feedback (on delete cascade) */
+    if(a==="deleteevent")return sb("events?id=eq."+enc(ev),{method:"DELETE",prefer:"return=representation"}).then(function(r){return r.length?okk():{ok:false,error:"event_not_found"}});
     if(a==="setphone"){
       var ph=String(p.phone||"").replace(/[^\d+]/g,"");
       return sb("people?code=eq."+enc(c),{method:"PATCH",prefer:"return=representation",body:{phone:ph,updated_at:now}}).then(function(r){
@@ -615,37 +624,16 @@ var CONFIG = {
     sel.innerHTML=events.map(function(e){return '<option value="'+esc(e.id)+'"'+(e.id===curEv?" selected":"")+'>'+esc(e.name)+(e.status==="closed"?" (closed)":"")+'</option>'}).join("")+'<option value="all"'+(curEv==="all"?" selected":"")+'>📊 All events (analytics)</option>';
     var e=evById(curEv),all=curEv==="all";
     document.body.classList.toggle("all",all);
-    $("evEdit").style.display=$("evLink").style.display=$("fbLink").style.display=all?"none":"";
+    $("evEdit").style.display=$("evLink").style.display=$("fbLink").style.display=$("evDel").style.display=all||!e?"none":"";
     $("mastP").textContent=all?"Compare every event side by side and see who shows up again and again.":(e?[e.name,fmtEvDate(e.date),e.location].filter(Boolean).join("  •  "):"Check people in on the day, add walk-ins on the spot, and see who replied and when.");
   }
   function showView(){
     var all=curEv==="all",v=all?"an":view;
-    $("attView").style.display=v==="att"?"":"none";$("anView").style.display=v==="an"?"":"none";$("fbView").style.display=v==="fb"?"":"none";$("plView").style.display=v==="pl"?"":"none";
+    $("attView").style.display=v==="att"?"":"none";$("anView").style.display=v==="an"?"":"none";$("fbView").style.display=v==="fb"?"":"none";
     $("seg").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x.dataset.v===v)});
     if(v==="an")renderAnalytics();
     if(v==="fb")loadFeedback();
-    if(v==="pl"&&plFor!==curEv&&window.TripPlanner){plFor=curEv;window.TripPlanner.mount($("plView"))}
   }
-
-  /* ---------- trip planner tab (planner.js) ---------- */
-  var plFor=null;
-  window.HRBridge={
-    toast:toast,
-    currentEvent:function(){return curEv&&curEv!=="all"?evById(curEv)||null:null},
-    headcount:function(){return rows.filter(function(r){var s=eff(r);return s==="confirmed"||s==="walkin"}).length},
-    /* opens the normal event form with the plan filled in; HR still has to click Save */
-    openEvent:function(id,p){
-      openEvent(id||"");
-      if(!id&&p.name)$("evName").value=p.name;
-      if(!id&&p.date)$("evDate").value=p.date;
-      if(p.deadline)$("evDl").value=p.deadline;
-      if(p.location)$("evLoc").value=p.location;
-      if(p.cost)$("evCost").value=p.cost;
-      if(!id&&p.theme)$("evTheme").value=p.theme;
-      if(p.program)$("evProg").value=p.program.map(function(x){return [x.title,x.text,x.time,x.scene].map(function(s){return String(s||"").replace(/\|/g,"/")}).join(" | ")}).join("\n");
-      $("evH").textContent=(id?"Edit event":"New event")+" · from the trip plan";
-    }
-  };
 
   /* ---------- feedback ---------- */
   var fbData=null,fbFor="",fbBusy=false;
@@ -1009,6 +997,27 @@ var CONFIG = {
       return api({action:"list",event:res.id}).then(function(l){if(l&&l.ok){events=l.events||events;curEv=res.id;lsSet("events_hr_cur",res.id);rows=l.rows||[];deadline=l.deadline||"";renderAll()}});
     }).catch(function(){btn.disabled=false;bad("No connection. Nothing was saved.")});
   };
+  /* ---------- delete event ---------- */
+  var delEv="";
+  $("evDel").onclick=function(){
+    var e=evById(curEv);if(!e)return;delEv=e.id;
+    var n=rows.filter(function(r){return r.event===e.id||curEv===e.id}).length;
+    $("edH").textContent="Delete “"+e.name+"”?";
+    $("edP").textContent="This deletes the event, its registration page"+(n?", all "+n+" repl"+(n===1?"y":"ies"):"")+" and all feedback for it. It cannot be undone.";
+    $("edOk").checked=false;$("edGo").disabled=true;$("edErr").className="err";$("edScrim").classList.add("show");
+  };
+  $("edOk").onchange=function(){$("edGo").disabled=!this.checked};
+  $("edCancel").onclick=function(){$("edScrim").classList.remove("show")};
+  $("edGo").onclick=function(){
+    var b=this,er=$("edErr"),gone=delEv;if(!gone||!$("edOk").checked)return;b.disabled=true;
+    api({action:"deleteevent",event:gone}).then(function(res){
+      if(!res||!res.ok){b.disabled=false;er.textContent="Couldn't delete. Please try again.";er.className="err show";return}
+      $("edScrim").classList.remove("show");toast("Event deleted");
+      var next=events.filter(function(x){return x.id!==gone})[0];var nid=next?next.id:"all";
+      return api({action:"list",event:nid}).then(function(l){if(l&&l.ok){events=l.events||[];curEv=nid;lsSet("events_hr_cur",nid);rows=l.rows||[];deadline=l.deadline||"";renderAll()}});
+    }).catch(function(){b.disabled=false;er.textContent="No connection. Nothing was deleted.";er.className="err show"});
+  };
+
   $("evSel").onchange=function(){setEvent(this.value)};
   $("evLink").onclick=function(){
     var base=CONFIG.REG_URL||"",sep=base.indexOf("?")>-1?"&":"?";

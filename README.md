@@ -34,23 +34,10 @@ Two static pages that share one Supabase database:
 
 HR opens `hr.html` (no sign-in), picks the event, and ticks people as they arrive. Use **New event** to create the next event; its link is `registration.html?event=<id>` (Link button). Events appear in the list immediately for everyone.
 
+**Delete** (next to Edit) removes the selected event together with all its replies and feedback, after you tick a confirmation box. It cannot be undone.
+
+The **reply deadline** does not close registration: employees can still reply after it, and anyone who says "can't make it" after the deadline is marked *apologized after deadline*. To stop new replies, open **Edit** and set **Registration** to **Closed**.
+
 ## Demo mode
 
 If `SUPABASE_URL` / `SUPABASE_KEY` are empty, both pages run on sample data stored in the browser only, so you can preview the design before connecting.
-
-## Plan a trip (HR page)
-
-`hr.html` has a **Plan a trip** tab, powered by `planner.js`. It's free and has no AI: everything runs in the browser.
-
-1. Fill in the trip: date, days, people, budget per person, places, breakfast and dinner. **Use registrations** fills in the people who said yes plus walk-ins.
-2. Click **Make the plan**. You get:
-   - a timed schedule
-   - places ranked by distance from the office
-   - transport options and a recommendation
-   - food and stay
-   - the budget per person, compared with your budget
-   - what to bring
-   - a draft group message with a **Copy** button
-3. **Create event from this plan** or **Fill "<event>" with this plan** only opens the normal event form with the plan filled in. Nothing is saved until you click **Save event**.
-
-All prices, places, hotels and buses are **sample data** in the `DATA` block at the top of `planner.js`. Edit them there to use real supplier prices. Upload `planner.js` together with `hr.html` when you publish.
