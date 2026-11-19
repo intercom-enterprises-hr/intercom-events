@@ -554,6 +554,7 @@ footer b{color:var(--yellow);font-weight:500}
       <h2>Are you in? <em>Lock it in.</em></h2>
       <div class="rule"></div>
       <p class="lede">Takes 20 seconds. Tell us if you are coming so we can book the right number of seats and jeeps. All fields are required, and it is one reply per employee.</p>
+      <p class="lede" id="dlNote" style="display:none;margin-top:6px"></p>
     </div>
 
     <div class="formgrid">
@@ -698,6 +699,24 @@ var CONFIG = {
   /* ---------- helpers for the page ---------- */
   function letters(el,t){var h="";for(var i=0;i<t.length;i++){h+=t[i]===" "?'<span class="sp"></span>':'<span class="ch" style="--i:'+i+'">'+esc(t[i])+'</span>'}el.innerHTML=h}
   function fmtDate(d,long){if(!d)return "";var x=new Date(d);if(isNaN(x))return d;return x.toLocaleDateString("en-GB",long?{weekday:"short",day:"numeric",month:"short"}:{day:"numeric",month:"short"})}
+  /* registration closes when HR sets it to Closed OR when the registration deadline passes */
+  function dlPassed(ev){return !!(ev&&ev.deadline&&!isNaN(new Date(ev.deadline))&&Date.now()>=new Date(ev.deadline).getTime())}
+  function isClosed(ev){return !ev||ev.status==="closed"||dlPassed(ev)}
+  function fmtDT(d){var x=new Date(d);return isNaN(x)?"":x.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})+" at "+x.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}
+  var dlTimer=null;
+  function showClosedState(ev){
+    var closed=isClosed(ev),note=$("dlNote");
+    $("closed").textContent=dlPassed(ev)&&ev.status!=="closed"
+      ?"Registration closed on "+fmtDT(ev.deadline)+". Please contact the HR team if you still want to join."
+      :"Registration for this event is closed. Please contact the HR team if you still want to join.";
+    $("closed").style.display=closed?"block":"none";
+    if(closed&&!submitted)$("formBody").style.display="none";
+    note.style.display=!closed&&ev&&ev.deadline?"":"none";
+    if(!closed&&ev&&ev.deadline)note.innerHTML="⏰ Registration closes on <b>"+esc(fmtDT(ev.deadline))+"</b>.";
+    clearTimeout(dlTimer);
+    var left=ev&&ev.deadline?new Date(ev.deadline).getTime()-Date.now():0;
+    if(!closed&&left>0&&left<2147483000)dlTimer=setTimeout(function(){if(EV===ev)showClosedState(ev)},left+500);
+  }
   var SCENE_BG={bus:"dawn",breakfast:"morning",jeep:"gold",sandboard:"gold",camp:"night",beach:"sea",party:"party",food:"morning",generic:"gen"};
   var EMOJI={desert:["🐥","🐤","🐣"],beach:["🦀","🐠","🐚"],classic:["🎈","🎉","⭐"]};
   var cdTimer=null;
@@ -762,8 +781,7 @@ var CONFIG = {
     var pw=String(ev.name).trim().split(/\s+/),pf=pw.shift();$("passTitle").innerHTML=esc(pf)+(pw.length?" <em>"+esc(pw.join(" "))+"</em>":"");
     $("passLoc").textContent=ev.location||"-";
     resetForm();
-    var closed=ev.status==="closed";
-    $("closed").style.display=closed?"block":"none";$("formBody").style.display=closed?"none":"";
+    showClosedState(ev);
     observeReveals();
   }
 
@@ -787,7 +805,7 @@ var CONFIG = {
       var first=evs.filter(function(e){return e.id===want})[0]||evs[0];$("demoSel").value=first.id;applyEvent(first);
       return;
     }
-    var p=want?api({action:"event",event:want}):api({action:"events"}).then(function(r){var o=(r.events||[]).filter(function(e){return e.status!=="closed"})[0]||(r.events||[])[0];return o?{ok:true,event:o}:{ok:false}});
+    var p=want?api({action:"event",event:want}):api({action:"events"}).then(function(r){var o=(r.events||[]).filter(function(e){return !isClosed(e)})[0]||(r.events||[])[0];return o?{ok:true,event:o}:{ok:false}});
     Promise.resolve(p).then(function(r){
       if(r&&r.ok&&r.event)applyEvent(r.event);
       else $("tl").innerHTML='<div class="msg show" style="display:block;grid-column:1/-1">We couldn\'t find this event. Please check the link you were given.</div>'
@@ -902,7 +920,8 @@ var CONFIG = {
   }
 
   function submit(){
-    if(submitted||!EV||EV.status==="closed")return;
+    if(submitted||!EV)return;
+    if(isClosed(EV)){showClosedState(EV);return}
     $("msg").classList.remove("show");
     var res=[["Employee code",vCode()],["Full name",vName()],["Work email",vEmail()],["Mobile number",vPhone()],["Are you coming?",vAtt()]];
     var missing=res.filter(function(x){return !x[1]}).map(function(x){return x[0]});

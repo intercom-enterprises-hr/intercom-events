@@ -36,7 +36,13 @@ HR opens `hr.html` (no sign-in), picks the event, and ticks people as they arriv
 
 **Delete** (next to Edit) removes the selected event together with all its replies and feedback, after you tick a confirmation box. It cannot be undone.
 
-The **reply deadline** does not close registration: employees can still reply after it, and anyone who says "can't make it" after the deadline is marked *apologized after deadline*. To stop new replies, open **Edit** and set **Registration** to **Closed**.
+**Registration deadline** (a date and time, set in **Edit** or with "change" above the list):
+
+- The registration page shows "Registration closes on …".
+- When the deadline is reached, registration **closes automatically**: the form disappears, and the database refuses late replies once `registration-deadline.sql` has been run in the Supabase SQL Editor.
+- To give people more time, move the deadline later. Registration opens again by itself.
+- **Registration → Closed now** in Edit closes it right away, whatever the deadline.
+- The HR list shows **Open**, **Closed (deadline passed)** or **Closed by HR** next to the deadline.
 
 ## Demo mode
 

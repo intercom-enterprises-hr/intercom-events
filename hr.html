@@ -282,7 +282,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
   <div class="field"><label class="lab" for="evName">Event name</label><input class="inp" id="evName" placeholder="e.g. Summer Beach Day"></div>
   <div class="two">
     <div class="field"><label class="lab" for="evDate">Event date &amp; time</label><input class="inp" id="evDate" type="datetime-local"></div>
-    <div class="field"><label class="lab" for="evDl">Reply deadline</label><input class="inp" id="evDl" type="datetime-local"></div>
+    <div class="field"><label class="lab" for="evDl">Registration deadline</label><input class="inp" id="evDl" type="datetime-local"></div>
   </div>
   <div class="two">
     <div class="field"><label class="lab" for="evLoc">Location</label><input class="inp" id="evLoc" placeholder="e.g. Ain Sokhna"></div>
@@ -291,7 +291,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
   <div class="field"><label class="lab" for="evTag">Tagline</label><input class="inp" id="evTag" placeholder="One fun line about the day"></div>
   <div class="two">
     <div class="field"><label class="lab" for="evTheme">Look</label><select class="inp" id="evTheme"><option value="desert">Desert</option><option value="beach">Beach</option><option value="classic">Classic Intercom</option></select></div>
-    <div class="field"><label class="lab" for="evStatus">Registration</label><select class="inp" id="evStatus"><option value="open">Open</option><option value="closed">Closed</option></select></div>
+    <div class="field"><label class="lab" for="evStatus">Registration</label><select class="inp" id="evStatus"><option value="open">Open until the deadline</option><option value="closed">Closed now</option></select></div>
   </div>
   <label class="chk"><input type="checkbox" id="evCd"> <span>Show a countdown to the event date on the registration page</span></label>
   <div class="field"><label class="lab" for="evProg">Program (one line per stop)</label><textarea class="inp" id="evProg" placeholder="Title | Short description | Time | picture&#10;Meet &amp; Mingle | We gather at the company | 8:00 AM | bus"></textarea>
@@ -328,7 +328,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 </div></div>
 
 <div class="scrim" id="dlScrim"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlH">
-  <h3 id="dlH">Reply deadline</h3><p>Anyone who says "can't make it" before this moment is marked <b>apologized before deadline</b>, after it <b>apologized after deadline</b>.</p>
+  <h3 id="dlH">Registration deadline</h3><p>Registration <b>closes automatically</b> at this date and time. To give people more time, move the deadline later and it opens again.</p>
   <div class="field"><label class="lab" for="dlIn">Deadline</label><input class="inp" id="dlIn" type="datetime-local"></div>
   <div class="btns"><button class="btn ghost" id="dlClear">Clear</button><button class="btn ghost" id="dlCancel">Cancel</button><button class="btn" id="dlSave">Save</button></div>
 </div></div>
@@ -614,14 +614,17 @@ var CONFIG = {
     $("list").querySelectorAll("[data-del]").forEach(function(b){b.onclick=function(){openDel(b.dataset.del)}});
     $("list").querySelectorAll(".sel").forEach(function(sl){sl.onchange=function(){setStatus(sl.dataset.c,sl.value)}});
     var ea=$("emptyAdd");if(ea)ea.onclick=function(){openWalkin(/^\d{4}$/.test(q)?q:"",/^\d{4}$/.test(q)?"":q)};
-    var dl=$("dlInfo");dl.innerHTML=deadline?'Reply deadline: <b>'+esc(fmt(deadline))+'</b> <button id="dlEdit">change</button>':'No reply deadline set <button id="dlEdit">set one</button>';
+    var dl=$("dlInfo"),ce=evById(curEv),st=ce&&ce.status==="closed"?' · <b style="color:var(--red)">Closed by HR</b>':(deadline&&new Date(deadline)<=new Date()?' · <b style="color:var(--red)">Closed (deadline passed)</b>':' · <b style="color:#2a7a4a">Open</b>');
+    dl.innerHTML=deadline?'Registration deadline: <b>'+esc(fmt(deadline))+'</b>'+st+' <button id="dlEdit">change</button>':'No registration deadline set'+st+' <button id="dlEdit">set one</button>';
     $("dlEdit").onclick=openDeadline;
   }
   function evById(id){return events.filter(function(e){return e.id===id})[0]}
+  /* registration is closed when HR set it to Closed or the registration deadline has passed */
+  function evClosed(e){return !!e&&(e.status==="closed"||(!!e.deadline&&new Date(e.deadline)<=new Date()))}
   function fmtEvDate(d){if(!d)return "";var x=new Date(d);return isNaN(x)?d:x.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}
   function renderEvBar(){
     var sel=$("evSel");
-    sel.innerHTML=events.map(function(e){return '<option value="'+esc(e.id)+'"'+(e.id===curEv?" selected":"")+'>'+esc(e.name)+(e.status==="closed"?" (closed)":"")+'</option>'}).join("")+'<option value="all"'+(curEv==="all"?" selected":"")+'>📊 All events (analytics)</option>';
+    sel.innerHTML=events.map(function(e){return '<option value="'+esc(e.id)+'"'+(e.id===curEv?" selected":"")+'>'+esc(e.name)+(evClosed(e)?" (closed)":"")+'</option>'}).join("")+'<option value="all"'+(curEv==="all"?" selected":"")+'>📊 All events (analytics)</option>';
     var e=evById(curEv),all=curEv==="all";
     document.body.classList.toggle("all",all);
     $("evEdit").style.display=$("evLink").style.display=$("fbLink").style.display=$("evDel").style.display=all||!e?"none":"";
@@ -835,12 +838,12 @@ var CONFIG = {
     var dl="";
     if(deadline){
       var bef=reps.filter(function(r){return new Date(r.registeredAt)<=new Date(deadline)}).length,aft=reps.length-bef;
-      dl='<div class="cardx"><h4>Deadline check</h4><div class="sub">Replies vs the reply deadline ('+esc(fmt(deadline))+')</div>'
+      dl='<div class="cardx"><h4>Deadline check</h4><div class="sub">Replies vs the registration deadline ('+esc(fmt(deadline))+')</div>'
         +'<div class="hb"><span>Before</span><div class="tr"><i style="width:'+pct(bef,reps.length)+'%;background:var(--blue)"></i></div><b>'+bef+'</b></div>'
         +'<div class="hb"><span>After</span><div class="tr"><i style="width:'+pct(aft,reps.length)+'%;background:var(--red)"></i></div><b>'+aft+'</b></div>'
         +'<div class="hb"><span>Said no early</span><div class="tr"><i style="width:'+pct(early,no||1)+'%;background:#9a9a9c"></i></div><b>'+early+'</b></div>'
         +'<div class="hb"><span>Said no late</span><div class="tr"><i style="width:'+pct(late,no||1)+'%;background:var(--red)"></i></div><b>'+late+'</b></div></div>';
-    }else dl='<div class="cardx"><h4>Deadline check</h4><div class="sub">No reply deadline set yet</div><div class="hintx">Set one from the Attendance tab to see early vs late replies and apologies.</div></div>';
+    }else dl='<div class="cardx"><h4>Deadline check</h4><div class="sub">No registration deadline set yet</div><div class="hintx">Set one from the Attendance tab to see early vs late replies and apologies.</div></div>';
 
     $("anView").innerHTML=
       '<div class="an">'
