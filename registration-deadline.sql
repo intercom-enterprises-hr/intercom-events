@@ -10,7 +10,7 @@ begin
   if not found then return jsonb_build_object('ok', false, 'error', 'event_not_found'); end if;
   if ev.status = 'closed' then return jsonb_build_object('ok', false, 'error', 'closed'); end if;
   if ev.deadline is not null and now() >= ev.deadline then return jsonb_build_object('ok', false, 'error', 'closed'); end if;
-  if p_code !~ '^[0-9]{4}$' or p_code::int < 1000 or p_code::int > 6999 then return jsonb_build_object('ok', false, 'error', 'invalid_code'); end if;
+  if p_code !~ '^[0-9]{4}$' or p_code::int < 1000 or p_code::int > 8999 then return jsonb_build_object('ok', false, 'error', 'invalid_code'); end if;
   if length(trim(coalesce(p_name,''))) < 3 or coalesce(p_email,'') !~ '^[^\s@]+@[^\s@]+\.[^\s@]{2,}$' or p_attending not in ('Yes','No')
     then return jsonb_build_object('ok', false, 'error', 'invalid_input'); end if;
   if exists (select 1 from public.registrations where event_id = p_event and code = p_code)

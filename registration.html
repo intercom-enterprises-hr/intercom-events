@@ -854,7 +854,7 @@ var CONFIG = {
   function phoneVal(){return phone.value.replace(/[^\d+]/g,"")}
   function setHint(id,txt,err){var h=$(id);h.textContent=txt||"";h.className="hint"+(err?" err":"")}
   function mark(inp,st){inp.classList.remove("bad","good");if(st){void inp.offsetWidth;inp.classList.add(st)}}
-  function codeOk(v){return /^\d{4}$/.test(v)&&+v>=1000&&+v<=6999}
+  function codeOk(v){return /^\d{4}$/.test(v)&&+v>=1000&&+v<=8999}
   function vCode(){
     var v=code.value;
     if(!v){mark(code,"bad");setHint("codeHint","Required: please enter your employee code",true);return false}

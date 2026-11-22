@@ -45,7 +45,7 @@ as $$
 declare att boolean; ov int;
 begin
   if not exists (select 1 from public.events where id = p_event) then return jsonb_build_object('ok', false, 'error', 'event_not_found'); end if;
-  if p_code !~ '^[0-9]{4}$' or p_code::int < 1000 or p_code::int > 6999 then return jsonb_build_object('ok', false, 'error', 'invalid_code'); end if;
+  if p_code !~ '^[0-9]{4}$' or p_code::int < 1000 or p_code::int > 8999 then return jsonb_build_object('ok', false, 'error', 'invalid_code'); end if;
   if length(trim(coalesce(p_name,''))) < 2 then return jsonb_build_object('ok', false, 'error', 'invalid_input'); end if;
   att := (p_data->>'attended')::boolean;
   if att is null then return jsonb_build_object('ok', false, 'error', 'invalid_input'); end if;

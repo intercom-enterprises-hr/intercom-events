@@ -200,7 +200,7 @@ footer{padding:10px 0 40px;text-align:center;font-size:13px;color:var(--mute)}
   }
   document.querySelectorAll("[data-att]").forEach(function(b){b.onclick=function(){setAttended(b.dataset.att==="1")}});
 
-  function codeOk(v){return /^\d{4}$/.test(v)&&+v>=1000&&+v<=6999}
+  function codeOk(v){return /^\d{4}$/.test(v)&&+v>=1000&&+v<=8999}
   var nameTouched=false,lookupFor="";
   $("name").addEventListener("input",function(){nameTouched=true});
   $("code").addEventListener("input",function(){

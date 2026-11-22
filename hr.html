@@ -282,7 +282,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 
 <div class="scrim" id="wiScrim"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="wiH">
   <h3 id="wiH">Add a walk-in</h3><p>Someone decided to join on the spot? Add them and they are checked in right away.</p>
-  <div class="field"><label class="lab" for="wiCode">Employee code</label><input class="inp" id="wiCode" inputmode="numeric" maxlength="4" placeholder="1000 to 6999"></div>
+  <div class="field"><label class="lab" for="wiCode">Employee code</label><input class="inp" id="wiCode" inputmode="numeric" maxlength="4" placeholder="1000 to 8999"></div>
   <div class="field"><label class="lab" for="wiName">Full name</label><input class="inp" id="wiName" placeholder="Employee name"></div>
   <div class="field"><label class="lab" for="wiPhone">Mobile number (optional)</label><input class="inp" id="wiPhone" type="tel" inputmode="tel" placeholder="01012345678"></div>
   <div class="field"><label class="lab" for="wiMail">Email (optional)</label><input class="inp" id="wiMail" type="email" placeholder="name@intercom.com.eg"></div>
@@ -794,7 +794,7 @@ var CONFIG = {
   $("wiSave").onclick=function(){
     var c=$("wiCode").value,n=$("wiName").value.trim(),m=$("wiMail").value.trim(),ph=$("wiPhone").value.trim(),e=$("wiErr");
     function bad(t){e.textContent=t;e.className="err show"}
-    if(!(/^\d{4}$/.test(c)&&+c>=1000&&+c<=6999))return bad("Code must be 4 digits from 1000 to 6999.");
+    if(!(/^\d{4}$/.test(c)&&+c>=1000&&+c<=8999))return bad("Code must be 4 digits from 1000 to 8999.");
     if(n.length<2)return bad("Please enter the employee's name.");
     var ex=rows.filter(function(r){return r.code===c})[0];
     var btn=$("wiSave");btn.disabled=true;
