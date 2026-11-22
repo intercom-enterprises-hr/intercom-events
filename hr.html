@@ -314,7 +314,9 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 </div></div>
 
 <div class="scrim" id="phScrim"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="phH">
-  <h3 id="phH">Mobile number</h3><p id="phP">Add a number so you can call or WhatsApp with one tap.</p>
+  <h3 id="phH">Edit details</h3><p id="phP">Fix the name or email, or add a number so you can call or WhatsApp with one tap.</p>
+  <div class="field"><label class="lab" for="phName">Full name</label><input class="inp" id="phName" autocomplete="off" placeholder="Employee name"></div>
+  <div class="field"><label class="lab" for="phMail">Email</label><input class="inp" id="phMail" type="email" autocomplete="off" placeholder="name@intercom.com.eg"></div>
   <div class="field"><label class="lab" for="phIn">Mobile number</label><input class="inp" id="phIn" type="tel" inputmode="tel" placeholder="01012345678"></div>
   <div class="err" id="phErr"></div>
   <div class="btns"><button class="btn ghost" id="phCancel">Cancel</button><button class="btn" id="phSave">Save</button></div>
@@ -403,6 +405,7 @@ var CONFIG = {
         if(a==="walkin")return res({ok:true});
         if(a==="setstatus"){if(!f)return res({ok:false,error:"not_found"});f.status=params.status;persist();return res({ok:true})}
         if(a==="delete"){if(!f)return res({ok:false,error:"not_found"});db.rows=db.rows.filter(function(x){return x!==f});persist();return res({ok:true})}
+        if(a==="setdetails"){if(!f)return res({ok:false,error:"not_found"});var ph2=String(params.phone||"").replace(/[^\d+]/g,"");f.name=params.name;f.email=params.email;db.rows.forEach(function(x){if(x.code===c)x.phone=ph2});persist();return res({ok:true})}
         if(a==="setphone"){var ph=String(params.phone||"").replace(/[^\d+]/g,"");db.rows.forEach(function(x){if(x.code===c)x.phone=ph});persist();return res({ok:true})}
         if(a==="setdeadline"){var e2=db.events.filter(function(x){return x.id===ev})[0];if(e2)e2.deadline=params.deadline||"";persist();return res({ok:true})}
         if(a==="deleteevent"){var n0=db.events.length;db.events=db.events.filter(function(x){return x.id!==ev});if(db.events.length===n0)return res({ok:false,error:"event_not_found"});db.rows=db.rows.filter(function(x){return x.event!==ev});persist();return res({ok:true})}
@@ -477,6 +480,12 @@ var CONFIG = {
     if(a==="setdeadline")return sb("events?id=eq."+enc(ev),{method:"PATCH",prefer:"return=representation",body:{deadline:p.deadline||null}}).then(function(r){return r.length?okk():{ok:false,error:"event_not_found"}});
     /* deleting the event also deletes its registrations and feedback (on delete cascade) */
     if(a==="deleteevent")return sb("events?id=eq."+enc(ev),{method:"DELETE",prefer:"return=representation"}).then(function(r){return r.length?okk():{ok:false,error:"event_not_found"}});
+    if(a==="setdetails"){
+      var dn=String(p.name||"").trim(),dm=String(p.email||"").trim(),dp=String(p.phone||"").replace(/[^\d+]/g,"");
+      return sb(rowQ,{method:"PATCH",prefer:"return=representation",body:{name:dn,email:dm}}).then(function(r){
+        if(!r.length)return {ok:false,error:"not_found"};
+        return sb("people",{method:"POST",prefer:"resolution=merge-duplicates",body:{code:c,name:dn,email:dm,phone:dp,updated_at:now}}).then(okk)});
+    }
     if(a==="setphone"){
       var ph=String(p.phone||"").replace(/[^\d+]/g,"");
       return sb("people?code=eq."+enc(c),{method:"PATCH",prefer:"return=representation",body:{phone:ph,updated_at:now}}).then(function(r){
@@ -596,7 +605,7 @@ var CONFIG = {
         var whenH='<span class="when'+(day?"":" none")+'">'+(day?esc(day):(r.source==="Walk-in"?"Walk-in":"No reply"))+'</span>';
         var ico;
         if(dd){
-          ico='<a class="ic call" href="tel:+'+dd+'" aria-label="Call '+esc(r.name)+'">'+ICON_CALL+'</a><a class="ic wa" href="https://wa.me/'+dd+'" target="_blank" rel="noopener" aria-label="WhatsApp '+esc(r.name)+'">'+ICON_WA+'</a><button class="ic ed" data-ph="'+esc(r.code)+'" aria-label="Edit number">'+ICON_ED+'</button>';
+          ico='<a class="ic call" href="tel:+'+dd+'" aria-label="Call '+esc(r.name)+'">'+ICON_CALL+'</a><a class="ic wa" href="https://wa.me/'+dd+'" target="_blank" rel="noopener" aria-label="WhatsApp '+esc(r.name)+'">'+ICON_WA+'</a><button class="ic ed" data-ph="'+esc(r.code)+'" aria-label="Edit details for '+esc(r.name)+'" title="Edit name, email or mobile">'+ICON_ED+'</button>';
         }else{
           ico='<button class="ic call noph" data-ph="'+esc(r.code)+'" aria-label="Add a number for '+esc(r.name)+'">'+ICON_CALL+'</button><button class="ic wa noph" data-ph="'+esc(r.code)+'" aria-label="Add a number for '+esc(r.name)+'">'+ICON_WA+'</button>';
         }
@@ -729,19 +738,23 @@ var CONFIG = {
 
   /* phone dialog */
   var phCode="";
-  function openPhone(c){var r=rows.filter(function(x){return x.code===c})[0];if(!r)return;phCode=c;$("phH").textContent=r.name;$("phIn").value=r.phone||"";$("phErr").className="err";$("phScrim").classList.add("show");setTimeout(function(){$("phIn").focus()},50)}
+  function openPhone(c){var r=rows.filter(function(x){return x.code===c})[0];if(!r)return;phCode=c;$("phH").textContent="Edit "+r.code;$("phName").value=r.name||"";$("phMail").value=r.email||"";$("phIn").value=r.phone||"";$("phErr").className="err";$("phScrim").classList.add("show");setTimeout(function(){$("phName").focus()},50)}
   function closePhone(){$("phScrim").classList.remove("show")}
   $("phCancel").onclick=closePhone;
   $("phSave").onclick=function(){
-    var r=rows.filter(function(x){return x.code===phCode})[0],v=$("phIn").value.trim(),e=$("phErr");
+    var r=rows.filter(function(x){return x.code===phCode})[0],v=$("phIn").value.trim(),nm=$("phName").value.trim(),ml=$("phMail").value.trim(),e=$("phErr");
+    if(!r)return closePhone();
+    if(nm.length<2){e.textContent="Please enter the employee's name.";e.className="err show";return}
+    if(ml&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(ml)){e.textContent="That email doesn't look right.";e.className="err show";return}
     if(v&&digits(v).length<10){e.textContent="That number looks too short.";e.className="err show";return}
-    var btn=$("phSave");btn.disabled=true;
-    api({action:"setphone",code:phCode,phone:v}).then(function(res){
-      btn.disabled=false;
+    var btn=$("phSave");btn.disabled=true;pending++;
+    api({action:"setdetails",code:phCode,name:nm,email:ml,phone:v}).then(function(res){
+      btn.disabled=false;pending--;
       if(!res||!res.ok){e.textContent="Couldn't save. Please try again.";e.className="err show";return}
-      r.phone=v.replace(/[^\d+]/g,"");if(demo)persist();closePhone();renderList();toast(v?"Number saved. Tap the icons to call or WhatsApp":"Number removed")
-    }).catch(function(){btn.disabled=false;e.textContent="No connection. Nothing was saved.";e.className="err show"});
+      r.name=nm;r.email=ml;r.phone=v.replace(/[^\d+]/g,"");if(demo)persist();closePhone();renderList();toast("Details saved for "+nm)
+    }).catch(function(){btn.disabled=false;pending--;e.textContent="No connection. Nothing was saved.";e.className="err show"});
   };
+  [$("phName"),$("phMail")].forEach(function(i){i.addEventListener("keydown",function(e){if(e.key==="Enter")$("phSave").click()})});
   $("phIn").addEventListener("keydown",function(e){if(e.key==="Enter")$("phSave").click()});
 
   /* delete dialog */
