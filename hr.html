@@ -822,6 +822,8 @@ var CONFIG = {
   /* ---------- analytics ---------- */
   function pct(a,b){return b?Math.round(a/b*100):0}
   function dayKey(iso){var d=new Date(iso);return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+  var TOD=["6 AM – 12 PM","12 PM – 5 PM","5 PM – 10 PM","10 PM – 6 AM"];
+  function todLab(n,r){return n+'<small style="display:block;color:#77777a;font-size:12px;line-height:1.2">'+r+'</small>'}
   function renderAnalytics(){if(curEv==="all")renderAllAnalytics();else renderEventAnalytics()}
   function renderEventAnalytics(){
     var reps=rows.filter(function(r){return r.registeredAt});
@@ -838,7 +840,7 @@ var CONFIG = {
     var maxD=Math.max.apply(null,order.map(function(k){return days[k].y+days[k].n}).concat([1]));
     var best=order.slice().sort(function(a,b){return(days[b].y+days[b].n)-(days[a].y+days[a].n)})[0];
     /* time of day */
-    var B=[["Morning","6am to 12pm",6,12],["Afternoon","12pm to 5pm",12,17],["Evening","5pm to 10pm",17,22],["Night","10pm to 6am",22,30]],bc=[0,0,0,0];
+    var B=[["Morning",TOD[0],6,12],["Afternoon",TOD[1],12,17],["Evening",TOD[2],17,22],["Night",TOD[3],22,30]],bc=[0,0,0,0];
     reps.forEach(function(r){var h=new Date(r.registeredAt).getHours();if(h<6)h+=24;for(var i=0;i<4;i++)if(h>=B[i][2]&&h<B[i][3]){bc[i]++;break}});
     var maxB=Math.max.apply(null,bc.concat([1]));
     /* arrivals */
@@ -880,7 +882,7 @@ var CONFIG = {
       +'<div class="cardx"><h4>Who is where</h4><div class="sub">Everyone on the list, by status</div><div class="stackbar">'+seg+'</div><div class="legend">'+leg+'</div></div>'
       +'<div class="cardx"><h4>Check-in progress</h4><div class="sub">Arrived out of everyone expected (confirmed + walk-ins)</div><div class="big2">'+inn+' <span style="font-size:24px;color:#77777a">/ '+expected+'</span></div><div class="prog" style="margin-top:10px"><i style="width:'+pct(inn,expected)+'%"></i></div></div>'
       +'<div class="cardx"><h4>Time of day</h4><div class="sub">When in the day people reply</div>'
-        +B.map(function(b,i){return '<div class="hb"><span title="'+b[1]+'">'+b[0]+'</span><div class="tr"><i style="width:'+bc[i]/maxB*100+'%;background:var(--yellow)"></i></div><b>'+bc[i]+'</b></div>'}).join("")+'</div>'
+        +B.map(function(b,i){return '<div class="hb w"><span>'+todLab(b[0],b[1])+'</span><div class="tr"><i style="width:'+bc[i]/maxB*100+'%;background:var(--yellow)"></i></div><b>'+bc[i]+'</b></div>'}).join("")+'</div>'
       +dl
       +'<div class="cardx wide"><h4>Arrivals on the day</h4><div class="sub">Check-ins in 15-minute slots</div>'+arrH+'</div>'
       +'</div>';
@@ -951,7 +953,7 @@ var CONFIG = {
     var trend=gk.length?'<div class="cols">'+gk.map(function(k){var g=gr[k];return '<div class="col" style="max-width:96px"><span class="n">'+(g.in_?pct(g.in_,g.exp)+"%":"-")+'</span><div class="pair"><div class="stk" style="height:'+Math.max(4,g.yes/gmax*100)+'px"><i style="background:var(--blue);height:100%"></i></div><div class="stk" style="height:'+Math.max(4,g.in_/gmax*100)+'px"><i style="background:var(--yellow);height:100%"></i></div></div><span class="d">'+esc(g.lab)+'<br>'+g.ev+(g.ev===1?" event":" events")+'</span></div>'}).join("")+'</div><div class="legend"><span><i style="background:var(--blue)"></i>Said yes</span><span><i style="background:var(--yellow)"></i>Came</span><span>Number on top = show-up rate</span></div>':'<div class="hintx">No dated events in this period.</div>';
     var mxIn=Math.max.apply(null,list.map(function(b){return Math.max(b.exp,b.yes,b.in_)}).concat([1]));
     function rank(arr,key,unit){return arr.length?arr.map(function(p){return '<div class="rank"><b>'+esc(p.name)+'</b><span>'+p[key]+' '+unit+'</span></div>'}).join(""):'<div class="hintx">Nothing to show yet.</div>'}
-    function bars(arr,lab,col){var m=Math.max.apply(null,arr.concat([1]));return lab.map(function(l,i){return '<div class="hb"><span>'+l+'</span><div class="tr"><i style="width:'+arr[i]/m*100+'%;background:'+col+'"></i></div><b>'+arr[i]+'</b></div>'}).join("")}
+    function bars(arr,lab,col,wide){var m=Math.max.apply(null,arr.concat([1]));return lab.map(function(l,i){return '<div class="hb'+(wide?" w":"")+'"><span>'+l+'</span><div class="tr"><i style="width:'+arr[i]/m*100+'%;background:'+col+'"></i></div><b>'+arr[i]+'</b></div>'}).join("")}
     var COL={confirmed:"var(--blue)",walkin:"var(--yellow)",apol_before:"#9a9a9c",apol_after:"var(--red)",noresp:"#d8d8d9"},tot=Math.max(1,Object.keys(stc).reduce(function(a,k){return a+stc[k]},0));
     var ctrl='<div class="cardx wide filters"><div class="field"><label class="lab" for="aPer">Period</label><select class="inp" id="aPer">'
       +[["all","All time"],["thismonth","This month"],["lastmonth","Last month"],["last3","Last 3 months"],["last6","Last 6 months"],["thisyear","This year"],["lastyear","Last year"],["custom","Custom range…"]].map(function(o){return '<option value="'+o[0]+'"'+(aPeriod===o[0]?" selected":"")+'>'+o[1]+'</option>'}).join("")+'</select></div>'
@@ -977,7 +979,7 @@ var CONFIG = {
         +'<div class="legend"><span><i style="background:var(--blue)"></i>Said yes</span><span><i style="background:var(--yellow)"></i>Came</span></div></div>'
       +'<div class="cardx"><h4>Who is where</h4><div class="sub">Everyone on the lists, by status</div><div class="stackbar">'+STATUSES.map(function(o){return '<i style="width:'+stc[o[0]]/tot*100+'%;background:'+COL[o[0]]+'"></i>'}).join("")+'</div><div class="legend">'+STATUSES.map(function(o){return '<span><i style="background:'+COL[o[0]]+'"></i>'+o[1]+' <b>'+stc[o[0]]+'</b></span>'}).join("")+'</div></div>'
       +'<div class="cardx"><h4>How early people reply</h4><div class="sub">Time between the reply and the event</div>'+bars(lead,["2+ weeks","1 to 2 weeks","3 to 7 days","1 to 3 days","Last day"],"var(--blue)")+'</div>'
-      +'<div class="cardx"><h4>Time of day</h4><div class="sub">When in the day people reply</div>'+bars(hod,["Morning","Afternoon","Evening","Night"],"var(--yellow)")+'</div>'
+      +'<div class="cardx"><h4>Time of day</h4><div class="sub">When in the day people reply</div>'+bars(hod,["Morning","Afternoon","Evening","Night"].map(function(n,i){return todLab(n,TOD[i])}),"var(--yellow)",true)+'</div>'
       +'<div class="cardx"><h4>How often people come</h4><div class="sub">People by number of events attended</div>'+bars([d1,d2,d3],["1 event","2 events","3 or more"],"var(--red)")+'</div>'
       +'<div class="cardx"><h4>Regulars</h4><div class="sub">Came to the most events</div>'+rank(reg,"att","events")+'</div>'
       +'<div class="cardx"><h4>Said yes, did not show</h4><div class="sub">Confirmed but missing on the day</div>'+rank(ns,"ns","time(s)")+'</div>'
