@@ -44,7 +44,7 @@ HR opens `hr.html` (no sign-in), picks the event, and ticks people as they arriv
 - **Registration → Closed now** in Edit closes it right away, whatever the deadline.
 - The HR list shows **Open**, **Closed (deadline passed)** or **Closed by HR** next to the deadline.
 
-**Department**: employees pick their department on the registration form (required). Run `department.sql` once in the Supabase SQL Editor to add it to the database. The department list lives in two places: the dropdown in `registration.html` and `DEPTS` in `hr.html`. People who registered before this was added show as **Not set**.
+**Department**: set by HR only (the registration form does not ask for it). Open a person's **Edit** box and pick the department, or choose it when adding a walk-in. Run `department.sql` once in the Supabase SQL Editor to add it to the database. The list is `DEPTS` in `hr.html`. People without one show as **Not set**. A department saved for someone is also used for their future events.
 
 On the HR page:
 

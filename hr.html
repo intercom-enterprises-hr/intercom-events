@@ -303,6 +303,7 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
   <h3 id="wiH">Add a walk-in</h3><p>Someone decided to join on the spot? Add them and they are checked in right away.</p>
   <div class="field"><label class="lab" for="wiCode">Employee code</label><input class="inp" id="wiCode" inputmode="numeric" maxlength="4" placeholder="1000 to 8999"></div>
   <div class="field"><label class="lab" for="wiName">Full name</label><input class="inp" id="wiName" placeholder="Employee name"></div>
+  <div class="field"><label class="lab" for="wiDept">Department (optional)</label><select class="inp" id="wiDept"></select></div>
   <div class="field"><label class="lab" for="wiPhone">Mobile number (optional)</label><input class="inp" id="wiPhone" type="tel" inputmode="tel" placeholder="01012345678"></div>
   <div class="field"><label class="lab" for="wiMail">Email (optional)</label><input class="inp" id="wiMail" type="email" placeholder="name@intercom.com.eg"></div>
   <div class="err" id="wiErr"></div>
@@ -346,9 +347,10 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
 </div></div>
 
 <div class="scrim" id="phScrim"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="phH">
-  <h3 id="phH">Edit details</h3><p id="phP">Fix the name or email, or add a number so you can call or WhatsApp with one tap.</p>
+  <h3 id="phH">Edit details</h3><p id="phP">Fix the name, email or department, or add a number so you can call or WhatsApp with one tap.</p>
   <div class="field"><label class="lab" for="phName">Full name</label><input class="inp" id="phName" autocomplete="off" placeholder="Employee name"></div>
   <div class="field"><label class="lab" for="phMail">Email</label><input class="inp" id="phMail" type="email" autocomplete="off" placeholder="name@intercom.com.eg"></div>
+  <div class="field"><label class="lab" for="phDept">Department</label><select class="inp" id="phDept"></select></div>
   <div class="field"><label class="lab" for="phIn">Mobile number</label><input class="inp" id="phIn" type="tel" inputmode="tel" placeholder="01012345678"></div>
   <div class="err" id="phErr"></div>
   <div class="btns"><button class="btn ghost" id="phCancel">Cancel</button><button class="btn" id="phSave">Save</button></div>
@@ -442,7 +444,7 @@ var CONFIG = {
         if(a==="walkin")return res({ok:true});
         if(a==="setstatus"){if(!f)return res({ok:false,error:"not_found"});f.status=params.status;persist();return res({ok:true})}
         if(a==="delete"){if(!f)return res({ok:false,error:"not_found"});db.rows=db.rows.filter(function(x){return x!==f});persist();return res({ok:true})}
-        if(a==="setdetails"){if(!f)return res({ok:false,error:"not_found"});var ph2=String(params.phone||"").replace(/[^\d+]/g,"");f.name=params.name;f.email=params.email;db.rows.forEach(function(x){if(x.code===c)x.phone=ph2});persist();return res({ok:true})}
+        if(a==="setdetails"){if(!f)return res({ok:false,error:"not_found"});var ph2=String(params.phone||"").replace(/[^\d+]/g,"");f.name=params.name;f.email=params.email;f.dept=params.department||"";db.rows.forEach(function(x){if(x.code===c)x.phone=ph2});persist();return res({ok:true})}
         if(a==="setphone"){var ph=String(params.phone||"").replace(/[^\d+]/g,"");db.rows.forEach(function(x){if(x.code===c)x.phone=ph});persist();return res({ok:true})}
         if(a==="setdeadline"){var e2=db.events.filter(function(x){return x.id===ev})[0];if(e2)e2.deadline=params.deadline||"";persist();return res({ok:true})}
         if(a==="deleteevent"){var n0=db.events.length;db.events=db.events.filter(function(x){return x.id!==ev});if(db.events.length===n0)return res({ok:false,error:"event_not_found"});db.rows=db.rows.filter(function(x){return x.event!==ev});persist();return res({ok:true})}
@@ -518,10 +520,10 @@ var CONFIG = {
     /* deleting the event also deletes its registrations and feedback (on delete cascade) */
     if(a==="deleteevent")return sb("events?id=eq."+enc(ev),{method:"DELETE",prefer:"return=representation"}).then(function(r){return r.length?okk():{ok:false,error:"event_not_found"}});
     if(a==="setdetails"){
-      var dn=String(p.name||"").trim(),dm=String(p.email||"").trim(),dp=String(p.phone||"").replace(/[^\d+]/g,"");
-      return sb(rowQ,{method:"PATCH",prefer:"return=representation",body:{name:dn,email:dm}}).then(function(r){
+      var dn=String(p.name||"").trim(),dm=String(p.email||"").trim(),dp=String(p.phone||"").replace(/[^\d+]/g,""),dd=String(p.department||"").trim();
+      return sb(rowQ,{method:"PATCH",prefer:"return=representation",body:{name:dn,email:dm,department:dd}}).then(function(r){
         if(!r.length)return {ok:false,error:"not_found"};
-        return sb("people",{method:"POST",prefer:"resolution=merge-duplicates",body:{code:c,name:dn,email:dm,phone:dp,updated_at:now}}).then(okk)});
+        return sb("people",{method:"POST",prefer:"resolution=merge-duplicates",body:{code:c,name:dn,email:dm,phone:dp,department:dd,updated_at:now}}).then(okk)});
     }
     if(a==="setphone"){
       var ph=String(p.phone||"").replace(/[^\d+]/g,"");
@@ -532,11 +534,11 @@ var CONFIG = {
       })
     }
     if(a==="walkin"){
-      var wn=String(p.name||"").trim(),wm=String(p.email||"").trim(),wp=String(p.phone||"").replace(/[^\d+]/g,"");
+      var wn=String(p.name||"").trim(),wm=String(p.email||"").trim(),wp=String(p.phone||"").replace(/[^\d+]/g,""),wd=String(p.department||"").trim();
       return sb(rowQ+"&select=id").then(function(ex){
         if(ex.length)return sb(rowQ,{method:"PATCH",body:{checked_in_at:now}}).then(okk);
-        return sb("registrations",{method:"POST",body:{event_id:ev,code:c,name:wn,email:wm,attending:"Walk-in",source:"Walk-in",status:"walkin",checked_in_at:now}}).then(function(){
-          var pr={code:c,name:wn,email:wm,updated_at:now};if(wp)pr.phone=wp;
+        return sb("registrations",{method:"POST",body:{event_id:ev,code:c,name:wn,email:wm,department:wd,attending:"Walk-in",source:"Walk-in",status:"walkin",checked_in_at:now}}).then(function(){
+          var pr={code:c,name:wn,email:wm,updated_at:now};if(wp)pr.phone=wp;if(wd)pr.department=wd;
           return sb("people",{method:"POST",prefer:"resolution=merge-duplicates",body:pr})
         }).then(okk)
       })
@@ -747,6 +749,7 @@ var CONFIG = {
     if(c[NODEPT])list.push(NODEPT);
     return '<option value="">All departments ('+rows.length+')</option>'+list.map(function(d){return '<option value="'+esc(d)+'"'+(d===deptF?" selected":"")+'>'+esc(d)+' ('+(c[d]||0)+')</option>'}).join("");
   }
+  function deptPick(cur){var l=DEPTS.slice();if(cur&&l.indexOf(cur)<0)l.push(cur);return '<option value="">Not set</option>'+l.map(function(d){return '<option value="'+esc(d)+'"'+(d===cur?" selected":"")+'>'+esc(d)+'</option>'}).join("")}
   function renderDeptSel(){var h=deptOptions(),d=$("dSel");if(d.dataset.h!==h){d.innerHTML=h;d.dataset.h=h}d.value=deptF}
   function setDept(v){deptF=v||"";renderAll()}
   $("dSel").onchange=function(){setDept(this.value)};
@@ -785,7 +788,7 @@ var CONFIG = {
 
   /* phone dialog */
   var phCode="";
-  function openPhone(c){var r=rows.filter(function(x){return x.code===c})[0];if(!r)return;phCode=c;$("phH").textContent="Edit "+r.code;$("phName").value=r.name||"";$("phMail").value=r.email||"";$("phIn").value=r.phone||"";$("phErr").className="err";$("phScrim").classList.add("show");setTimeout(function(){$("phName").focus()},50)}
+  function openPhone(c){var r=rows.filter(function(x){return x.code===c})[0];if(!r)return;phCode=c;$("phH").textContent="Edit "+r.code;$("phName").value=r.name||"";$("phMail").value=r.email||"";$("phIn").value=r.phone||"";$("phDept").innerHTML=deptPick(r.dept||"");$("phErr").className="err";$("phScrim").classList.add("show");setTimeout(function(){$("phName").focus()},50)}
   function closePhone(){$("phScrim").classList.remove("show")}
   $("phCancel").onclick=closePhone;
   $("phSave").onclick=function(){
@@ -795,10 +798,10 @@ var CONFIG = {
     if(ml&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(ml)){e.textContent="That email doesn't look right.";e.className="err show";return}
     if(v&&digits(v).length<10){e.textContent="That number looks too short.";e.className="err show";return}
     var btn=$("phSave");btn.disabled=true;pending++;
-    api({action:"setdetails",code:phCode,name:nm,email:ml,phone:v}).then(function(res){
+    var dv=$("phDept").value;api({action:"setdetails",code:phCode,name:nm,email:ml,phone:v,department:dv}).then(function(res){
       btn.disabled=false;pending--;
       if(!res||!res.ok){e.textContent="Couldn't save. Please try again.";e.className="err show";return}
-      r.name=nm;r.email=ml;r.phone=v.replace(/[^\d+]/g,"");if(demo)persist();closePhone();renderList();toast("Details saved for "+nm)
+      r.name=nm;r.email=ml;r.dept=dv;r.phone=v.replace(/[^\d+]/g,"");if(demo)persist();closePhone();renderList();toast("Details saved for "+nm)
     }).catch(function(){btn.disabled=false;pending--;e.textContent="No connection. Nothing was saved.";e.className="err show"});
   };
   [$("phName"),$("phMail")].forEach(function(i){i.addEventListener("keydown",function(e){if(e.key==="Enter")$("phSave").click()})});
@@ -820,7 +823,7 @@ var CONFIG = {
   };
 
   /* walk-in dialog */
-  function openWalkin(c,n){$("wiCode").value=c||"";$("wiName").value=n||"";$("wiMail").value="";$("wiPhone").value="";$("wiErr").className="err";$("wiScrim").classList.add("show");setTimeout(function(){(c?$("wiName"):$("wiCode")).focus()},50)}
+  function openWalkin(c,n){$("wiDept").innerHTML=deptPick("");$("wiCode").value=c||"";$("wiName").value=n||"";$("wiMail").value="";$("wiPhone").value="";$("wiErr").className="err";$("wiScrim").classList.add("show");setTimeout(function(){(c?$("wiName"):$("wiCode")).focus()},50)}
   function closeWalkin(){$("wiScrim").classList.remove("show")}
   $("addBtn").onclick=function(){var q=query.trim();openWalkin(/^\d{4}$/.test(q)?q:"",/^\d{4}$/.test(q)||!q?"":q)};
   $("wiCancel").onclick=closeWalkin;
@@ -832,12 +835,12 @@ var CONFIG = {
     if(n.length<2)return bad("Please enter the employee's name.");
     var ex=rows.filter(function(r){return r.code===c})[0];
     var btn=$("wiSave");btn.disabled=true;
-    api({action:"walkin",code:c,name:n,email:m,phone:ph}).then(function(res){
+    var wdv=$("wiDept").value;api({action:"walkin",code:c,name:n,email:m,phone:ph,department:wdv}).then(function(res){
       btn.disabled=false;
       if(!res||!res.ok)return bad(res&&res.error==="invalid_code"?"That code isn't valid.":"Couldn't save. Please try again.");
       var now=new Date().toISOString();
       if(ex){ex.checkedInAt=now;toast(ex.name+" was already in the list, checked in ✅")}
-      else{var nr={code:c,name:n,email:m,phone:ph.replace(/[^\d+]/g,""),attending:"Walk-in",registeredAt:"",checkedInAt:now,source:"Walk-in",status:"walkin",event:curEv};rows.push(nr);if(demo)db.rows.push(nr);toast(n+" added as a walk-in 🎒")}
+      else{var nr={code:c,name:n,email:m,dept:wdv,phone:ph.replace(/[^\d+]/g,""),attending:"Walk-in",registeredAt:"",checkedInAt:now,source:"Walk-in",status:"walkin",event:curEv};rows.push(nr);if(demo)db.rows.push(nr);toast(n+" added as a walk-in 🎒")}
       if(demo)persist();closeWalkin();query="";$("q").value="";setFilter("all");renderAll();
     }).catch(function(){btn.disabled=false;bad("No connection. Nothing was saved.")});
   };

@@ -227,8 +227,6 @@ h2 em{font-style:normal;color:var(--red)}
 .inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,90,170,.18);transform:translateY(-1px)}
 .inp.bad{border-color:var(--red);box-shadow:0 0 0 3px rgba(237,28,36,.12);animation:shake .4s}
 .inp.good{border-color:#2a9d57}
-select.inp.sel{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:40px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23404041' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 14px center}
-select.inp.sel:invalid,select.inp.sel.empty{color:#8a8a8c}
 .code{font:400 34px/1 var(--display);letter-spacing:.5em;text-align:center;padding:12px 8px 12px 20px}
 .hint{font-size:13px;color:#77777a;margin-top:6px;min-height:19px}
 .hint.err{color:var(--red);font-weight:500}
@@ -606,11 +604,6 @@ footer b{color:var(--yellow);font-weight:500}
               <div class="hint" id="emailHint"></div>
             </div>
             <div class="field">
-              <label class="lab" for="dept">Department<i>*</i></label>
-              <select class="inp sel" id="dept" autocomplete="off"><option value="">Choose your department</option><option>Business Operations</option><option>CS - Administration</option><option>CS - Finance</option><option>CS - HR</option><option>CS - IT App</option><option>CS - IT Serv.</option><option>CS - PMO</option><option>CS - QA</option><option>GTechs</option><option>CS - Business Analysis</option><option>ES - SAP</option><option>ES - SDC - Digital</option><option>ES - SDC - IM</option><option>ES - SDC - QC</option><option>ES - PreSales &amp; Arch.</option><option>Marketing</option><option>Sales</option><option>Top Mngmnt</option><option>TS - ITS &amp; Netw</option><option>TS - Managed Services</option><option>TS - SIO</option><option>TS - Smart Infra</option></select>
-              <div class="hint" id="deptHint"></div>
-            </div>
-            <div class="field">
               <label class="lab" for="phone">Mobile number<i>*</i></label>
               <input class="inp" id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="01xxxxxxxxx">
               <div class="hint" id="phoneHint"></div>
@@ -697,7 +690,7 @@ var CONFIG = {
     if(p.action==="event")return sb("events?id=eq."+encodeURIComponent(p.event)+"&select=*").then(function(a){return a.length?{ok:true,event:toEvent(a[0])}:{ok:false}});
     if(p.action==="events")return sb("events?select=*&order=event_date.asc.nullslast").then(function(a){return {ok:true,events:a.map(toEvent)}});
     if(p.action==="person")return sb("rpc/person_name",{method:"POST",body:{p_code:p.code}}).then(function(n){return {ok:!!n,name:n||""}});
-    if(p.action==="register")return sb("rpc/register_for_event",{method:"POST",body:{p_event:p.event,p_code:p.code,p_name:p.name,p_email:p.email,p_attending:p.attending,p_phone:p.phone||"",p_department:p.department||""}});
+    if(p.action==="register")return sb("rpc/register_for_event",{method:"POST",body:{p_event:p.event,p_code:p.code,p_name:p.name,p_email:p.email,p_attending:p.attending,p_phone:p.phone||""}});
     return Promise.reject(new Error("unknown action"))
   }
   function urlEvent(){try{return new URLSearchParams(location.search).get("event")||""}catch(e){return ""}}
@@ -793,9 +786,8 @@ var CONFIG = {
   }
 
   function resetForm(){
-    ["code","name","email","phone","dept"].forEach(function(i){$(i).value="";$(i).classList.remove("bad","good")});
-    $("dept").classList.add("empty");
-    ["codeHint","nameHint","emailHint","deptHint","attHint"].forEach(function(i){$(i).textContent="";$(i).className="hint"});
+    ["code","name","email","phone"].forEach(function(i){$(i).value="";$(i).classList.remove("bad","good")});
+    ["codeHint","nameHint","emailHint","attHint"].forEach(function(i){$(i).textContent="";$(i).className="hint"});
     $("codeHint").textContent="";
     document.querySelectorAll(".choice").forEach(function(x){x.classList.remove("on");x.setAttribute("aria-checked","false")});
     $("goTxt").textContent="Submit";$("go").classList.remove("busy");$("msg").classList.remove("show");
@@ -858,7 +850,7 @@ var CONFIG = {
   }
 
   /* ---------- form ---------- */
-  var code=$("code"),nameI=$("name"),email=$("email"),phone=$("phone"),dept=$("dept"),nameTouched=false;
+  var code=$("code"),nameI=$("name"),email=$("email"),phone=$("phone"),nameTouched=false;
   function phoneVal(){return phone.value.replace(/[^\d+]/g,"")}
   function setHint(id,txt,err){var h=$(id);h.textContent=txt||"";h.className="hint"+(err?" err":"")}
   function mark(inp,st){inp.classList.remove("bad","good");if(st){void inp.offsetWidth;inp.classList.add(st)}}
@@ -871,7 +863,6 @@ var CONFIG = {
   }
   function vName(){var v=nameI.value.trim();if(!v){mark(nameI,"bad");setHint("nameHint","Required: please type your full name",true);return false}if(v.length<3){mark(nameI,"bad");setHint("nameHint","That name looks too short",true);return false}mark(nameI,"good");setHint("nameHint","");return true}
   function vEmail(){var v=email.value.trim();if(!v){mark(email,"bad");setHint("emailHint","Required: please enter your work email",true);return false}if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){mark(email,"bad");setHint("emailHint","That email doesn't look right",true);return false}mark(email,"good");setHint("emailHint","");return true}
-  function vDept(){dept.classList.toggle("empty",!dept.value);if(!dept.value){mark(dept,"bad");setHint("deptHint","Required: please choose your department",true);return false}mark(dept,"good");setHint("deptHint","");return true}
   function vPhone(){var v=phoneVal();if(!v){mark(phone,"bad");setHint("phoneHint","Required: please enter your mobile number",true);return false}if(!/^\+?\d{10,15}$/.test(v)){mark(phone,"bad");setHint("phoneHint","That number doesn't look right",true);return false}mark(phone,"good");setHint("phoneHint","");return true}
   function vAtt(){if(!att){$("choices").classList.add("bad");setHint("attHint","Required: tell us if you are coming",true);return false}$("choices").classList.remove("bad");setHint("attHint","");return true}
 
@@ -888,7 +879,6 @@ var CONFIG = {
   nameI.addEventListener("blur",function(){if(nameI.value)vName()});
   email.addEventListener("input",function(){if(email.classList.contains("bad"))vEmail()});
   email.addEventListener("blur",function(){if(email.value)vEmail()});
-  dept.addEventListener("change",vDept);dept.classList.add("empty");
   phone.addEventListener("input",function(){if(phone.classList.contains("bad"))vPhone()});
   phone.addEventListener("blur",function(){if(phone.value)vPhone()});
   [code,nameI,email,phone].forEach(function(el){el.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();submit()}})});
@@ -933,7 +923,7 @@ var CONFIG = {
     if(submitted||!EV)return;
     if(isClosed(EV)){showClosedState(EV);return}
     $("msg").classList.remove("show");
-    var res=[["Employee code",vCode()],["Full name",vName()],["Work email",vEmail()],["Department",vDept()],["Mobile number",vPhone()],["Are you coming?",vAtt()]];
+    var res=[["Employee code",vCode()],["Full name",vName()],["Work email",vEmail()],["Mobile number",vPhone()],["Are you coming?",vAtt()]];
     var missing=res.filter(function(x){return !x[1]}).map(function(x){return x[0]});
     if(missing.length){
       showMsg("Almost there! Please fill in: "+missing.join(", ")+".");
@@ -945,7 +935,7 @@ var CONFIG = {
     var btn=$("go"),label=$("goTxt").textContent;btn.classList.add("busy");$("goTxt").textContent="Sending";
     function fail(m){btn.classList.remove("busy");$("goTxt").textContent=label;showMsg(m)}
     if(demo){setTimeout(function(){finish(att)},900);return}
-    api({action:"register",event:EV.id,code:code.value,name:nameI.value.trim(),email:email.value.trim(),phone:phoneVal(),department:dept.value,attending:att}).then(function(r){
+    api({action:"register",event:EV.id,code:code.value,name:nameI.value.trim(),email:email.value.trim(),phone:phoneVal(),attending:att}).then(function(r){
       if(r&&r.ok)finish(att);
       else if(r&&r.error==="duplicate")fail("This employee code has already replied. If you need to change your answer, please contact the HR team.");
       else if(r&&r.error==="invalid_code")fail("That code isn't valid. Please check your employee code.");
