@@ -83,7 +83,22 @@ textarea.inp{min-height:130px;resize:vertical;font-size:14px;line-height:1.4}
 @keyframes tick{40%{transform:scale(1.25);color:var(--red)}}
 
 .bar{display:grid;gap:12px;margin:26px 0 14px}
-@media(min-width:900px){.bar{grid-template-columns:1fr auto auto}}
+@media(min-width:900px){.bar{grid-template-columns:1fr minmax(190px,250px) auto}}
+.bar .btns{display:flex;gap:8px;flex-wrap:wrap}.bar .btns .btn{flex:1 1 auto;white-space:nowrap}
+@media(max-width:600px){.bar .btns{flex-wrap:nowrap}.bar .btns .btn{flex:1 1 0;padding-left:6px;padding-right:6px;font-size:12px;letter-spacing:.04em}}
+.bar .dsel{max-width:none;font-size:15px;padding:15px 36px 15px 14px;height:100%}
+.who .dpt{margin-top:2px;font-size:12px;color:#77777a;line-height:1.25}
+.antools{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;border-top-color:var(--blue)}
+.antools .field{margin:0;flex:1 1 220px;max-width:340px}
+.antools .btn{margin-left:auto}
+.tbl td.z{color:#b5b5b7}
+.tbl tr.tot td{font-weight:700;border-top:2px solid var(--k10)}
+.pdfwrap{width:1060px;padding:28px 30px;background:#fff;font-family:'Roboto',Arial,sans-serif}
+.pdfwrap .an{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.pdfwrap .an .wide{grid-column:1/-1}
+.pdfwrap .kpis{grid-template-columns:repeat(4,1fr)}
+.pdfwrap .noprint{display:none!important}
+.pdfhead{display:flex;align-items:center;gap:18px;border-bottom:3px solid var(--yellow);padding-bottom:14px;margin-bottom:6px}
+.pdfhead img{height:40px}.pdfhead h2{font:400 30px/1 'Bebas Neue',Impact,sans-serif;color:var(--k90);margin:0}.pdfhead p{margin:4px 0 0;font-size:13px;color:#77777a}
 .search{position:relative}
 .search svg{position:absolute;left:14px;top:50%;margin-top:-10px;width:20px;height:20px;stroke:#77777a}
 .search input{width:100%;font:400 18px 'Roboto',Arial,sans-serif;padding:16px 16px 16px 44px;border:1px solid #cfcfd0;border-radius:2px;background:#fff}
@@ -267,8 +282,12 @@ footer{padding:30px 0 50px;text-align:center;font-size:13px;color:#77777a}
   <div class="bar">
     <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
       <input id="q" placeholder="Search by code or name" autocomplete="off" inputmode="search" aria-label="Search employees"></label>
+    <select class="sel dsel" id="dSel" aria-label="Filter by department"></select>
+    <div class="btns">
     <button class="btn" id="addBtn">＋ Add walk-in</button>
     <button class="btn ghost" id="refBtn">↻ Refresh</button>
+    <button class="btn ghost" id="xlBtn" title="Download this event's list as an Excel file">⬇ Excel</button>
+    </div>
   </div>
   <div class="tabs" id="tabs" role="tablist"></div>
   <div class="meta"><span id="count"></span><span id="dlInfo"></span></div>
@@ -367,7 +386,12 @@ var CONFIG = {
 (function(){
   var $=function(id){return document.getElementById(id)};
   var demo=!CONFIG.SUPABASE_URL||!CONFIG.SUPABASE_KEY;
-  var view='att',events=[],curEv="",db=null,rows=[],deadline="",filter="all",query="",pending=0,loaded=false;
+  var view='att',events=[],curEv="",db=null,rows=[],deadline="",filter="all",query="",pending=0,loaded=false,deptF="";
+  var DEPTS=["Business Operations","CS - Administration","CS - Finance","CS - HR","CS - IT App","CS - IT Serv.","CS - PMO","CS - QA","GTechs","CS - Business Analysis","ES - SAP","ES - SDC - Digital","ES - SDC - IM","ES - SDC - QC","ES - PreSales & Arch.","Marketing","Sales","Top Mngmnt","TS - ITS & Netw","TS - Managed Services","TS - SIO","TS - Smart Infra"];
+  var NODEPT="Not set";
+  function deptOf(r){return String(r.dept||"").trim()||NODEPT}
+  function allRows(){return rows}
+  function shown(){return deptF?rows.filter(function(r){return deptOf(r)===deptF}):rows}
 
   /* ---------- helpers ---------- */
   function esc(s){var d=document.createElement("div");d.textContent=s==null?"":String(s);return d.innerHTML}
@@ -476,10 +500,10 @@ var CONFIG = {
       return Promise.all([
         sb("events?select=*&order=event_date.desc.nullslast"),
         sb("registrations?select=*"+(ev&&ev!=="all"?"&event_id=eq."+enc(ev):"")+"&order=name.asc&limit=5000"),
-        sb("people?select=code,phone&limit=5000")
+        sb("people?select=code,phone,department&limit=5000")
       ]).then(function(r){
-        var evs=r[0].map(evOut),ph={};r[2].forEach(function(x){ph[x.code]=x.phone||""});
-        var rr=r[1].map(function(x){return {code:x.code,name:x.name,email:x.email||"",attending:x.attending,registeredAt:x.registered_at||"",checkedInAt:x.checked_in_at||"",source:x.source,status:x.status||"",phone:ph[x.code]||"",event:x.event_id}});
+        var evs=r[0].map(evOut),ph={},pd={};r[2].forEach(function(x){ph[x.code]=x.phone||"";pd[x.code]=x.department||""});
+        var rr=r[1].map(function(x){return {code:x.code,name:x.name,email:x.email||"",attending:x.attending,registeredAt:x.registered_at||"",checkedInAt:x.checked_in_at||"",source:x.source,status:x.status||"",phone:ph[x.code]||"",dept:x.department||pd[x.code]||"",event:x.event_id}});
         var e1=evs.filter(function(x){return x.id===ev})[0];
         return {ok:true,rows:rr,events:evs,deadline:e1?e1.deadline:""}
       })
@@ -570,6 +594,7 @@ var CONFIG = {
   /* ---------- render ---------- */
   var lastStats={};
   function renderStats(){
+    var rows=shown();
     var s=[
       ["Replies",rows.filter(function(r){return r.source!=="Walk-in"&&r.attending!=="Walk-in"}).length,"all"],
       ["Confirmed",rows.filter(fn("yes")).length,"yes"],
@@ -582,13 +607,13 @@ var CONFIG = {
     $("stats").querySelectorAll(".tile").forEach(function(t){t.onclick=function(){setFilter(t.dataset.f)}});
   }
   function renderTabs(){
-    $("tabs").innerHTML=FILTERS.map(function(f){var n=rows.filter(f[2]).length;return '<button class="tab'+(filter===f[0]?" on":"")+'" role="tab" data-f="'+f[0]+'">'+f[1]+'<small>'+n+'</small></button>'}).join("");
+    var R=shown();$("tabs").innerHTML=FILTERS.map(function(f){var n=R.filter(f[2]).length;return '<button class="tab'+(filter===f[0]?" on":"")+'" role="tab" data-f="'+f[0]+'">'+f[1]+'<small>'+n+'</small></button>'}).join("");
     $("tabs").querySelectorAll(".tab").forEach(function(t){t.onclick=function(){setFilter(t.dataset.f)}});
   }
   function setFilter(f){filter=f;renderTabs();renderList()}
   function visible(){
     var q=query.trim().toLowerCase(),f=fn(filter);
-    return rows.filter(function(r){return f(r)&&(!q||r.code.indexOf(q)>-1||r.name.toLowerCase().indexOf(q)>-1)})
+    return shown().filter(function(r){return f(r)&&(!q||r.code.indexOf(q)>-1||r.name.toLowerCase().indexOf(q)>-1)})
       .sort(function(a,b){return a.name.trim().toLowerCase().localeCompare(b.name.trim().toLowerCase())||(+a.code-+b.code)});
   }
   var ICON_CALL='<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
@@ -605,11 +630,11 @@ var CONFIG = {
   function fmtDay(iso){if(!iso)return "";var d=new Date(iso);return isNaN(d)?"":d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}
   function renderList(){
     var v=visible(),q=query.trim();
-    $("count").textContent=v.length+" of "+rows.length+" shown";
+    $("count").textContent=v.length+" of "+shown().length+" shown"+(deptF?" in "+deptF:"");
     var h="";
     if(!v.length){
       var isCode=/^\d{4}$/.test(q);
-      h+='<div class="empty"><div class="big">🏜️</div><h3>'+(rows.length?"Nothing here":"No replies yet")+'</h3><div>'+(q?"No match for “"+esc(q)+"”.":"Replies will show up here as they arrive.")+'</div>'+(q?'<button class="btn" id="emptyAdd">＋ Add '+(isCode?"code "+esc(q):"as walk-in")+'</button>':"")+'</div>';
+      h+='<div class="empty"><div class="big">🏜️</div><h3>'+(shown().length?"Nothing here":"No replies yet")+'</h3><div>'+(q?"No match for “"+esc(q)+"”.":"Replies will show up here as they arrive.")+'</div>'+(q?'<button class="btn" id="emptyAdd">＋ Add '+(isCode?"code "+esc(q):"as walk-in")+'</button>':"")+'</div>';
     }else{
       h+=v.map(function(r){
         var s=eff(r),inn=!!r.checkedInAt;
@@ -624,7 +649,7 @@ var CONFIG = {
         }
         return '<div class="row'+(inn?" in":"")+'">'
           +'<button class="tick'+(inn?" on":"")+'" data-c="'+esc(r.code)+'" aria-pressed="'+inn+'" aria-label="Check in '+esc(r.name)+'">✓</button>'
-          +'<div class="who"><b><span class="code">'+esc(r.code)+'</span>'+esc(r.name)+'</b>'+(inn?'<div class="meta2"><span class="here">Here at '+esc(fmtT(r.checkedInAt))+'</span></div>':'')+'</div>'
+          +'<div class="who"><b><span class="code">'+esc(r.code)+'</span>'+esc(r.name)+'</b>'+(r.dept?'<div class="dpt">'+esc(r.dept)+'</div>':'')+(inn?'<div class="meta2"><span class="here">Here at '+esc(fmtT(r.checkedInAt))+'</span></div>':'')+'</div>'
           +whenH
           +'<div class="stack">'+whenH+'<select class="sel s-'+s+'" data-c="'+esc(r.code)+'" aria-label="Status for '+esc(r.name)+'">'+opts+'</select></div>'
           +'<div class="act">'+ico+'<button class="ic del" data-del="'+esc(r.code)+'" aria-label="Delete '+esc(r.name)+'" title="Delete record">'+ICON_DEL+'</button></div></div>';
@@ -716,8 +741,17 @@ var CONFIG = {
       +'<div class="cardx wide"><h4>Comments</h4><div class="sub">Everything people wrote, newest first</div>'+(cards||'<div class="hintx">No written comments yet.</div>')+'</div>'
       +'</div>';
   }
-  function renderAll(){renderEvBar();renderStats();renderTabs();renderList();showView()}
-  function setEvent(id){curEv=id;lsSet("events_hr_cur",id);filter="all";query="";$("q").value="";rows=[];renderAll();return load(false)}
+  function deptOptions(){
+    var c={};rows.forEach(function(r){var d=deptOf(r);c[d]=(c[d]||0)+1});
+    var list=DEPTS.slice();Object.keys(c).forEach(function(d){if(list.indexOf(d)<0&&d!==NODEPT)list.push(d)});
+    if(c[NODEPT])list.push(NODEPT);
+    return '<option value="">All departments ('+rows.length+')</option>'+list.map(function(d){return '<option value="'+esc(d)+'"'+(d===deptF?" selected":"")+'>'+esc(d)+' ('+(c[d]||0)+')</option>'}).join("");
+  }
+  function renderDeptSel(){var h=deptOptions(),d=$("dSel");if(d.dataset.h!==h){d.innerHTML=h;d.dataset.h=h}d.value=deptF}
+  function setDept(v){deptF=v||"";renderAll()}
+  $("dSel").onchange=function(){setDept(this.value)};
+  function renderAll(){renderEvBar();renderDeptSel();renderStats();renderTabs();renderList();showView()}
+  function setEvent(id){curEv=id;lsSet("events_hr_cur",id);filter="all";deptF="";query="";$("q").value="";rows=[];renderAll();return load(false)}
 
   /* ---------- actions ---------- */
   function toggle(code){
@@ -831,6 +865,7 @@ var CONFIG = {
   function todLab(n,r){return n+'<small style="display:block;color:#77777a;font-size:12px;line-height:1.2">'+r+'</small>'}
   function renderAnalytics(){if(curEv==="all")renderAllAnalytics();else renderEventAnalytics()}
   function renderEventAnalytics(){
+    var ALL=allRows(),rows=shown();
     var reps=rows.filter(function(r){return r.registeredAt});
     var yes=reps.filter(function(r){return r.attending==="Yes"}).length,no=reps.filter(function(r){return r.attending==="No"}).length;
     var conf=rows.filter(fn("yes")).length,walk=rows.filter(fn("walk")).length,inn=rows.filter(fn("in")).length;
@@ -875,6 +910,7 @@ var CONFIG = {
 
     $("anView").innerHTML=
       '<div class="an">'
+      +anTools(true)
       +'<div class="kpis wide">'
         +'<div class="kpi"><b>'+reps.length+'</b><span>Total replies</span><small>'+yes+' yes, '+no+' no</small></div>'
         +'<div class="kpi"><b>'+pct(yes,reps.length)+'%</b><span>Say yes</span><small>of those who replied</small></div>'
@@ -890,7 +926,82 @@ var CONFIG = {
         +B.map(function(b,i){return '<div class="hb w"><span>'+todLab(b[0],b[1])+'</span><div class="tr"><i style="width:'+bc[i]/maxB*100+'%;background:var(--yellow)"></i></div><b>'+bc[i]+'</b></div>'}).join("")+'</div>'
       +dl
       +'<div class="cardx wide"><h4>Arrivals on the day</h4><div class="sub">Check-ins in 15-minute slots</div>'+arrH+'</div>'
+      +deptCard(ALL,"Everyone on this event's list, by department")
       +'</div>';
+    bindAnTools();
+  }
+  /* ---------- department breakdown ---------- */
+  function deptStats(list){
+    var m={},order=[];
+    list.forEach(function(r){var d=deptOf(r),x=m[d];if(!x){x=m[d]={d:d,tot:0,rep:0,conf:0,ab:0,aa:0,nr:0,walk:0,inn:0};order.push(d)}
+      var st=eff(r);x.tot++;if(r.registeredAt)x.rep++;
+      if(st==="confirmed")x.conf++;else if(st==="apol_before")x.ab++;else if(st==="apol_after")x.aa++;else if(st==="walkin")x.walk++;else x.nr++;
+      if(r.checkedInAt)x.inn++});
+    return order.map(function(d){return m[d]}).sort(function(a,b){return(a.d===NODEPT)-(b.d===NODEPT)||b.tot-a.tot||a.d.localeCompare(b.d)});
+  }
+  var DCOLS=[["tot","Total"],["rep","Replied"],["conf","Confirmed"],["ab","Apologized before deadline"],["aa","Apologized after deadline"],["walk","Walk-ins"],["nr","No response"],["inn","Checked in"]];
+  function deptCard(list,sub){
+    var D=deptStats(list);
+    if(!D.length)return '<div class="cardx wide"><h4>By department</h4><div class="sub">'+esc(sub)+'</div><div class="hintx">No one on the list yet.</div></div>';
+    var T={};DCOLS.forEach(function(c){T[c[0]]=D.reduce(function(a,x){return a+x[c[0]]},0)});
+    function td(n){return '<td'+(n?'':' class="z"')+'>'+n+'</td>'}
+    var click=curEv!=="all";
+    return '<div class="cardx wide"><h4>By department</h4><div class="sub">'+esc(sub)+(click?'. Click a department to filter.':'')+'</div><div class="tblw"><table class="tbl"><thead><tr><th>Department</th>'+DCOLS.map(function(c){return '<th>'+c[1].replace(" deadline","<br>deadline")+'</th>'}).join("")+'</tr></thead><tbody>'
+      +D.map(function(x){return '<tr data-d="'+esc(x.d)+'" style="'+(click?'cursor:pointer':'')+(x.d===deptF?';background:#fff6e0':'')+'"><td>'+esc(x.d)+'</td>'+DCOLS.map(function(c){return td(x[c[0]])}).join("")+'</tr>'}).join("")
+      +'<tr class="tot"><td>Total</td>'+DCOLS.map(function(c){return td(T[c[0]])}).join("")+'</tr>'
+      +'</tbody></table></div></div>';
+  }
+  function anTools(withDept){
+    return '<div class="cardx wide antools noprint">'
+      +(withDept?'<div class="field"><label class="lab" for="aDept">Department</label><select class="inp" id="aDept">'+deptOptions()+'</select></div>':'')
+      +'<button class="btn" id="pdfBtn" type="button">⬇ Download PDF</button></div>';
+  }
+  function bindAnTools(){
+    var a=$("aDept");if(a)a.onchange=function(){setDept(this.value)};
+    var p=$("pdfBtn");if(p)p.onclick=downloadPdf;
+    if(curEv!=="all")$("anView").querySelectorAll("tr[data-d]").forEach(function(t){t.onclick=function(){setDept(deptF===t.dataset.d?"":t.dataset.d)}});
+  }
+
+  /* ---------- downloads ---------- */
+  var libs={};
+  function loadLib(url,test){
+    if(test())return Promise.resolve();
+    return libs[url]||(libs[url]=new Promise(function(ok,no){var s=document.createElement("script");s.src=url;s.onload=function(){test()?ok():no(new Error("lib"))};s.onerror=function(){delete libs[url];no(new Error("lib"))};document.head.appendChild(s)}));
+  }
+  function fileName(ext){var e=evById(curEv),n=curEv==="all"?"All events":(e?e.name:"Event");return (n+(deptF?" - "+deptF:"")).replace(/[\/:*?"<>|]+/g," ").replace(/s+/g," ").trim()+ext}
+  function xDate(iso){if(!iso)return "";var d=new Date(iso);return isNaN(d)?"":d}
+  function downloadExcel(){
+    if(!rows.length)return toast("No one on this event's list yet.",true);
+    var b=$("xlBtn"),t=b.textContent;b.disabled=true;b.textContent="Preparing…";
+    loadLib("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",function(){return !!window.XLSX}).then(function(){
+      var X=window.XLSX,list=shown().slice().sort(function(a,b){return deptOf(a).localeCompare(deptOf(b))||a.name.localeCompare(b.name)});
+      var lab={};STATUSES.forEach(function(o){lab[o[0]]=o[1]});
+      var data=[["Code","Name","Department","Email","Mobile","Reply","Status","Replied at","Checked in at","Source"]].concat(list.map(function(r){
+        return [+r.code||r.code,r.name,r.dept||"",r.email||"",r.phone||"",r.attending||"",lab[eff(r)]||"",xDate(r.registeredAt),xDate(r.checkedInAt),r.source||""]}));
+      var ws=X.utils.aoa_to_sheet(data,{cellDates:true,dateNF:"dd-mmm-yyyy hh:mm"});
+      ws["!cols"]=[8,28,24,32,15,9,26,18,18,13].map(function(w){return {wch:w}});
+      ws["!autofilter"]={ref:X.utils.encode_range({s:{c:0,r:0},e:{c:9,r:data.length-1}})};
+      var D=deptStats(list),dd=[["Department"].concat(DCOLS.map(function(c){return c[1]}))].concat(D.map(function(x){return [x.d].concat(DCOLS.map(function(c){return x[c[0]]}))}));
+      dd.push(["Total"].concat(DCOLS.map(function(c){return D.reduce(function(a,x){return a+x[c[0]]},0)})));
+      var ws2=X.utils.aoa_to_sheet(dd);ws2["!cols"]=[26,8,9,11,26,26,10,12,11].map(function(w){return {wch:w}});
+      var wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Employees");X.utils.book_append_sheet(wb,ws2,"By department");
+      X.writeFile(wb,fileName(".xlsx"));toast("Excel file downloaded");
+    }).catch(function(){toast("Couldn't prepare the Excel file. Check your connection.",true)}).then(function(){b.disabled=false;b.textContent=t});
+  }
+  $("xlBtn").onclick=downloadExcel;
+  function downloadPdf(){
+    var b=$("pdfBtn"),t=b.textContent;b.disabled=true;b.textContent="Preparing…";
+    loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",function(){return !!window.html2pdf}).then(function(){
+      var e=evById(curEv),title=curEv==="all"?"All events analytics":(e?e.name:"Event")+" analytics";
+      var info=curEv==="all"?($("aPer")?$("aPer").options[$("aPer").selectedIndex].text:""):(e?[fmtEvDate(e.date),e.location].filter(Boolean).join("  •  "):"");
+      if(deptF&&curEv!=="all")info+=(info?"  •  ":"")+"Department: "+deptF;
+      var w=document.createElement("div");w.className="pdfwrap";
+      w.innerHTML='<div class="pdfhead"><img src="'+document.querySelector("header img").src+'" alt=""><div><h2>'+esc(title)+'</h2><p>'+esc(info)+(info?"  •  ":"")+"Downloaded "+esc(new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}))+'</p></div></div>'+$("anView").innerHTML;
+      w.querySelectorAll(".filters").forEach(function(x){x.remove()});
+      var host=document.createElement("div");host.style.cssText="position:fixed;left:-20000px;top:0";host.appendChild(w);document.body.appendChild(host);
+      return window.html2pdf().set({margin:[8,6,8,6],filename:fileName(" - analytics.pdf"),image:{type:"jpeg",quality:.95},html2canvas:{scale:2,useCORS:true,windowWidth:1060,backgroundColor:"#ffffff"},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"],avoid:[".cardx",".kpi",".pdfhead","tr"]}}).from(w).save()
+        .then(function(){host.remove();toast("PDF downloaded")},function(x){host.remove();throw x});
+    }).catch(function(){toast("Couldn't prepare the PDF. Check your connection.",true)}).then(function(){b.disabled=false;b.textContent=t});
   }
   $("seg").querySelectorAll("button").forEach(function(b){b.onclick=function(){
     view=b.dataset.v;showView();window.scrollTo&&window.scrollTo({top:$("seg").offsetTop-10,behavior:"smooth"});
@@ -965,7 +1076,8 @@ var CONFIG = {
       +(aPeriod==="custom"?'<div class="field"><label class="lab" for="aFrom">From</label><input class="inp" type="date" id="aFrom" value="'+esc(aFrom)+'"></div><div class="field"><label class="lab" for="aTo">To</label><input class="inp" type="date" id="aTo" value="'+esc(aTo)+'"></div>':'')
       +'<div class="field"><label class="lab" for="aGrp">Trend by</label><select class="inp" id="aGrp">'+[["month","Month"],["quarter","Quarter"],["year","Year"]].map(function(o){return '<option value="'+o[0]+'"'+(aGroup===o[0]?" selected":"")+'>'+o[1]+'</option>'}).join("")+'</select></div>'
       +'<div class="fnote">'+evs.length+' of '+events.length+' events'+(noDate?' · '+noDate+' without a date left out':'')+'</div></div>';
-    $("anView").innerHTML='<div class="an">'+ctrl
+    var evRows=rows.filter(function(r){return ids[r.event]});
+    $("anView").innerHTML='<div class="an">'+anTools(false)+ctrl
       +(evs.length?
       '<div class="kpis wide">'
         +'<div class="kpi"><b>'+evs.length+'</b><span>Events</span><small>'+held.length+' with check-ins</small></div>'
@@ -988,8 +1100,10 @@ var CONFIG = {
       +'<div class="cardx"><h4>How often people come</h4><div class="sub">People by number of events attended</div>'+bars([d1,d2,d3],["1 event","2 events","3 or more"],"var(--red)")+'</div>'
       +'<div class="cardx"><h4>Regulars</h4><div class="sub">Came to the most events</div>'+rank(reg,"att","events")+'</div>'
       +'<div class="cardx"><h4>Said yes, did not show</h4><div class="sub">Confirmed but missing on the day</div>'+rank(ns,"ns","time(s)")+'</div>'
+      +deptCard(evRows,"All replies across the events in this period")
       :'<div class="cardx wide"><div class="hintx">No events in this period. Try another range.</div></div>')
       +'</div>';
+    bindAnTools();
     var ap=$("aPer");if(ap)ap.onchange=function(){aPeriod=this.value;renderAllAnalytics()};
     var ag=$("aGrp");if(ag)ag.onchange=function(){aGroup=this.value;renderAllAnalytics()};
     var af=$("aFrom");if(af)af.onchange=function(){aFrom=this.value;renderAllAnalytics()};

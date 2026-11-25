@@ -44,6 +44,15 @@ HR opens `hr.html` (no sign-in), picks the event, and ticks people as they arriv
 - **Registration → Closed now** in Edit closes it right away, whatever the deadline.
 - The HR list shows **Open**, **Closed (deadline passed)** or **Closed by HR** next to the deadline.
 
+**Department**: employees pick their department on the registration form (required). Run `department.sql` once in the Supabase SQL Editor to add it to the database. The department list lives in two places: the dropdown in `registration.html` and `DEPTS` in `hr.html`. People who registered before this was added show as **Not set**.
+
+On the HR page:
+
+- The department dropdown next to the search filters the list, the tiles and the event analytics.
+- Analytics has a **By department** table (confirmed, apologized before/after the deadline, walk-ins, no response, checked in).
+- **⬇ Excel** downloads the event's list (plus a By department sheet). It follows the department filter.
+- **⬇ Download PDF** in Analytics saves the analytics as a PDF.
+
 ## Demo mode
 
 If `SUPABASE_URL` / `SUPABASE_KEY` are empty, both pages run on sample data stored in the browser only, so you can preview the design before connecting.
