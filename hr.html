@@ -992,21 +992,45 @@ var CONFIG = {
     }).catch(function(){toast("Couldn't prepare the Excel file. Check your connection.",true)}).then(function(){b.disabled=false;b.textContent=t});
   }
   $("xlBtn").onclick=downloadExcel;
-  /* page width = report width (1060px + margins, A4 proportions) so nothing is cropped */
-  function pdfWorker(w){return window.html2pdf().set({margin:[24,24,24,24],filename:fileName(" - analytics.pdf"),image:{type:"jpeg",quality:.95},html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0,windowWidth:1060,backgroundColor:"#ffffff"},jsPDF:{unit:"px",format:[1108,1567],hotfixes:["px_scaling"]},pagebreak:{mode:["css","legacy"],avoid:[".cardx",".kpi",".pdfhead","tr"]}}).from(w)}
+  /* PDF: the report is laid out on a fixed 1060px sheet pinned to the top-left of the window (so the window size
+     or scroll position cannot shift it), captured, then cut into A4 pages between cards */
+  function makePdf(w,name){
+    var host=document.createElement("div");host.style.cssText="position:fixed;left:0;top:0;width:1060px;z-index:-1;pointer-events:none;background:#fff";
+    host.appendChild(w);document.body.appendChild(host);
+    var ready=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();
+    return ready.then(function(){
+      var top=w.getBoundingClientRect().top,H=w.offsetHeight,cuts=[];
+      w.querySelectorAll(".pdfhead,.an>*,.tbl tr").forEach(function(el){var r=el.getBoundingClientRect();cuts.push(Math.round(r.bottom-top)+7)});
+      cuts.sort(function(a,b){return a-b});
+      return window.html2canvas(w,{scale:2,useCORS:true,backgroundColor:"#ffffff",x:0,y:0,scrollX:0,scrollY:0,width:1060,height:H,windowWidth:1060}).then(function(cv){
+        var J=window.jspdf.jsPDF,pdf=new J({unit:"mm",format:"a4",orientation:"portrait"});
+        var M=8,CW=210-2*M,mmPx=CW/1060,PH=Math.floor((297-2*M)/mmPx),k=cv.width/1060,y=0,first=true;
+        while(y<H-2){
+          var lim=Math.min(y+PH,H),end=lim;
+          if(lim<H){var c=cuts.filter(function(v){return v>y+120&&v<=lim});if(c.length)end=c[c.length-1]}
+          var sh=Math.round((end-y)*k),pc=document.createElement("canvas");pc.width=cv.width;pc.height=sh;
+          var g=pc.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,pc.width,sh);g.drawImage(cv,0,Math.round(y*k),cv.width,sh,0,0,cv.width,sh);
+          if(!first)pdf.addPage();first=false;
+          pdf.addImage(pc.toDataURL("image/jpeg",.92),"JPEG",M,M,CW,(end-y)*mmPx);
+          y=end;
+        }
+        pdf.save(name);
+      });
+    }).then(function(){host.remove()},function(x){host.remove();throw x});
+  }
   function downloadPdf(){
     var b=$("pdfBtn"),t=b.textContent;b.disabled=true;b.textContent="Preparing…";
-    loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",function(){return !!window.html2pdf}).then(function(){
+    Promise.all([
+      loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",function(){return !!window.html2canvas}),
+      loadLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",function(){return !!(window.jspdf&&window.jspdf.jsPDF)})
+    ]).then(function(){
       var e=evById(curEv),title=curEv==="all"?"All events analytics":(e?e.name:"Event")+" analytics";
       var info=curEv==="all"?($("aPer")?$("aPer").options[$("aPer").selectedIndex].text:""):(e?[fmtEvDate(e.date),e.location].filter(Boolean).join("  •  "):"");
       if(deptF&&curEv!=="all")info+=(info?"  •  ":"")+"Department: "+deptF;
       var w=document.createElement("div");w.className="pdfwrap";
       w.innerHTML='<div class="pdfhead"><img src="'+document.querySelector("header img").src+'" alt=""><div><h2>'+esc(title)+'</h2><p>'+esc(info)+(info?"  •  ":"")+"Downloaded "+esc(new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}))+'</p></div></div>'+$("anView").innerHTML;
-      w.querySelectorAll(".filters").forEach(function(x){x.remove()});
-      var sy=window.scrollY,sx=window.scrollX;window.scrollTo(0,0);
-      var back=function(){window.scrollTo(sx,sy)};
-      return pdfWorker(w).save()
-        .then(function(){back();toast("PDF downloaded")},function(x){back();throw x});
+      w.querySelectorAll(".filters,.noprint").forEach(function(x){x.remove()});
+      return makePdf(w,fileName(" - analytics.pdf")).then(function(){toast("PDF downloaded")});
     }).catch(function(){toast("Couldn't prepare the PDF. Check your connection.",true)}).then(function(){b.disabled=false;b.textContent=t});
   }
   $("seg").querySelectorAll("button").forEach(function(b){b.onclick=function(){
