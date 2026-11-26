@@ -992,6 +992,8 @@ var CONFIG = {
     }).catch(function(){toast("Couldn't prepare the Excel file. Check your connection.",true)}).then(function(){b.disabled=false;b.textContent=t});
   }
   $("xlBtn").onclick=downloadExcel;
+  /* page width = report width (1060px + margins, A4 proportions) so nothing is cropped */
+  function pdfWorker(w){return window.html2pdf().set({margin:[24,24,24,24],filename:fileName(" - analytics.pdf"),image:{type:"jpeg",quality:.95},html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0,windowWidth:1060,backgroundColor:"#ffffff"},jsPDF:{unit:"px",format:[1108,1567],hotfixes:["px_scaling"]},pagebreak:{mode:["css","legacy"],avoid:[".cardx",".kpi",".pdfhead","tr"]}}).from(w)}
   function downloadPdf(){
     var b=$("pdfBtn"),t=b.textContent;b.disabled=true;b.textContent="Preparing…";
     loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",function(){return !!window.html2pdf}).then(function(){
@@ -1001,9 +1003,10 @@ var CONFIG = {
       var w=document.createElement("div");w.className="pdfwrap";
       w.innerHTML='<div class="pdfhead"><img src="'+document.querySelector("header img").src+'" alt=""><div><h2>'+esc(title)+'</h2><p>'+esc(info)+(info?"  •  ":"")+"Downloaded "+esc(new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}))+'</p></div></div>'+$("anView").innerHTML;
       w.querySelectorAll(".filters").forEach(function(x){x.remove()});
-      var host=document.createElement("div");host.style.cssText="position:fixed;left:-20000px;top:0";host.appendChild(w);document.body.appendChild(host);
-      return window.html2pdf().set({margin:[8,6,8,6],filename:fileName(" - analytics.pdf"),image:{type:"jpeg",quality:.95},html2canvas:{scale:2,useCORS:true,windowWidth:1060,backgroundColor:"#ffffff"},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"],avoid:[".cardx",".kpi",".pdfhead","tr"]}}).from(w).save()
-        .then(function(){host.remove();toast("PDF downloaded")},function(x){host.remove();throw x});
+      var sy=window.scrollY,sx=window.scrollX;window.scrollTo(0,0);
+      var back=function(){window.scrollTo(sx,sy)};
+      return pdfWorker(w).save()
+        .then(function(){back();toast("PDF downloaded")},function(x){back();throw x});
     }).catch(function(){toast("Couldn't prepare the PDF. Check your connection.",true)}).then(function(){b.disabled=false;b.textContent=t});
   }
   $("seg").querySelectorAll("button").forEach(function(b){b.onclick=function(){
